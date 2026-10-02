@@ -1,0 +1,79 @@
+{
+  "title": "Corner Coffee: order ahead",
+  "device": "phone",
+  "start": "menu",
+  "shared": {
+    "tabs": { "type": "tabbar", "items": [{ "text": "Menu", "goes": "menu" }, "Rewards", { "text": "Orders", "goes": "status" }, "Account"] }
+  },
+  "screens": {
+    "menu": {
+      "title": "Menu",
+      "children": [
+        { "type": "title", "text": "Corner Coffee" },
+        { "type": "search", "hint": "Search drinks" },
+        { "type": "chips", "items": ["All", "Coffee", "Tea", "Pastries"], "active": ["All"] },
+        {
+          "type": "list",
+          "id": "drinks",
+          "items": [
+            { "title": "Oat latte", "subtitle": "Our usual. Smooth, not sweet", "meta": "$5.25", "goes": "drink" },
+            { "title": "Cold brew", "subtitle": "Steeped 18 hours", "meta": "$4.50" },
+            { "title": "Chai", "subtitle": "Spiced, with honey", "meta": "$4.75" }
+          ]
+        },
+        { "type": "sketch", "label": "pastry carousel", "height": 96, "note": "Pastries sell out by 10. Hide sold-out ones, don't grey them." },
+        { "type": "button", "id": "cart-button", "text": "Cart (1)", "variant": "primary", "icon": "cart", "width": "hug", "pin": "bottom-right", "goes": "cart" },
+        { "use": "tabs", "active": "Menu" }
+      ]
+    },
+    "drink": {
+      "title": "Oat latte",
+      "children": [
+        { "type": "navbar", "back": true, "actions": ["heart", "share"] },
+        { "type": "image", "label": "Oat latte photo", "aspect": "16:9" },
+        { "type": "row", "justify": "between", "children": [{ "type": "heading", "text": "Oat latte", "width": "hug" }, { "type": "label", "text": "$5.25" }] },
+        { "type": "segmented", "items": ["8 oz", "12 oz", "16 oz"], "active": "12 oz" },
+        { "type": "toggle", "text": "Extra shot (+$0.75)", "on": true },
+        { "type": "select", "label": "Milk", "value": "Oat" },
+        { "type": "spacer" },
+        { "type": "button", "text": "Add to order", "variant": "primary", "goes": "cart" }
+      ]
+    },
+    "cart": {
+      "title": "Your order",
+      "children": [
+        { "type": "navbar", "title": "Your order", "back": true },
+        { "type": "card", "children": [
+          { "type": "row", "justify": "between", "children": [{ "type": "text", "text": "Oat latte, 12 oz", "width": "hug" }, { "type": "label", "text": "$5.25" }] },
+          { "type": "label", "text": "Oat milk · extra shot" },
+          { "type": "stepper", "value": 1 }
+        ] },
+        { "type": "section", "title": "Pickup", "children": [
+          { "type": "radio", "items": ["As soon as it's ready", "Schedule for later"], "value": "As soon as it's ready" }
+        ] },
+        { "type": "input", "label": "Name for the cup", "value": "Marcus" },
+        { "type": "spacer" },
+        { "type": "divider" },
+        { "type": "row", "justify": "between", "children": [{ "type": "heading", "text": "Total", "width": "hug" }, { "type": "heading", "text": "$5.73", "width": "hug" }] },
+        { "type": "button", "id": "pay", "text": "Pay", "variant": "primary", "goes": "status", "note": "Apple Pay sheet happens here. Keep it one tap." }
+      ]
+    },
+    "status": {
+      "title": "Order status",
+      "children": [
+        { "type": "navbar", "title": "Order #214" },
+        { "type": "steps", "items": ["Ordered", "Preparing", "Ready"], "current": 2 },
+        { "type": "card", "children": [
+          { "type": "row", "gap": 12, "children": [{ "type": "image", "width": 56, "height": 56, "label": "" }, { "type": "stack", "gap": 2, "children": [{ "type": "text", "text": "Oat latte, 12 oz" }, { "type": "label", "text": "Preparing · about 4 min" }] }] },
+          { "type": "progress", "value": 0.45 }
+        ] },
+        { "type": "alert", "kind": "info", "text": "We'll text you when it's on the counter." },
+        { "type": "map", "label": "Corner Coffee, Main St", "height": 150 },
+        { "type": "spacer" },
+        { "type": "button", "text": "I'm here", "variant": "primary" },
+        { "type": "button", "text": "Ask the barista", "variant": "outline", "note": "People tap this when the time estimate is wrong. Watch how often." },
+        { "use": "tabs", "active": "Orders" }
+      ]
+    }
+  }
+}

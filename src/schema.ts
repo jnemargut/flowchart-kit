@@ -1,0 +1,71 @@
+/** JSON Schema for *.flowchart.json, generated from the vocabulary (editors get autocomplete; the validator is stricter). */
+import { MARKER_COLORS, SHAPE_FILLS, SHAPE_TYPES } from "../vendor/sketch/shapes";
+import { FRAME_PROPS, LINK_PROPS, NODE_PROPS, SIDES, STAMP_NAMES, STICKY_COLORS, TYPES } from "./vocab";
+
+const point = { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 };
+const shape = {
+  type: "object", required: ["type", "points"],
+  properties: { id: { type: "string" }, type: { enum: [...SHAPE_TYPES] }, points: { type: "array", items: point }, fill: { enum: [...SHAPE_FILLS] }, text: { type: "string" }, color: { enum: [...MARKER_COLORS] } },
+};
+const strokes = { type: "array", items: { type: "object", required: ["points"], properties: { points: { type: "array", items: point }, color: { enum: [...MARKER_COLORS] } } } };
+
+export function buildSchema() {
+  return {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    title: "Flowchart Kit board",
+    type: "object",
+    required: ["title", "nodes"],
+    additionalProperties: false,
+    properties: {
+      $schema: { type: "string" },
+      title: { type: "string" },
+      frames: {
+        type: "object",
+        additionalProperties: {
+          type: "object", additionalProperties: false,
+          properties: {
+            title: { type: "string", description: FRAME_PROPS.title },
+            near: { description: FRAME_PROPS.near, type: "array", items: [{ enum: SIDES }, { type: "string" }], minItems: 2, maxItems: 2 },
+            dir: { enum: ["right", "down"], description: FRAME_PROPS.dir },
+            notes: { type: "string", description: FRAME_PROPS.notes },
+            url: { type: "string", description: FRAME_PROPS.url },
+            shapes: { type: "array", items: shape },
+            size: point,
+          },
+        },
+      },
+      nodes: {
+        type: "object",
+        additionalProperties: {
+          type: "object", additionalProperties: false,
+          properties: {
+            type: { enum: TYPES, description: NODE_PROPS.type },
+            text: { type: "string", description: NODE_PROPS.text },
+            frame: { type: "string", description: NODE_PROPS.frame },
+            color: { enum: STICKY_COLORS, description: NODE_PROPS.color },
+            near: { type: "string", description: NODE_PROPS.near },
+            icon: { enum: STAMP_NAMES, description: NODE_PROPS.icon },
+            at: { ...point, description: NODE_PROPS.at },
+            ref: { type: "string", description: NODE_PROPS.ref },
+            url: { type: "string", description: NODE_PROPS.url },
+            sketch: { type: "boolean", description: NODE_PROPS.sketch },
+            product: { type: "boolean", description: NODE_PROPS.product },
+          },
+        },
+      },
+      links: {
+        type: "array",
+        items: {
+          type: "object", required: ["from", "to"], additionalProperties: false,
+          properties: { from: { type: "string", description: LINK_PROPS.from }, to: { type: "string", description: LINK_PROPS.to }, label: { type: "string", description: LINK_PROPS.label }, style: { enum: ["solid", "dashed"], description: LINK_PROPS.style } },
+        },
+      },
+      present: { type: "array", items: { type: "string" }, description: "Frame ids in presenting order." },
+      transition: { enum: ["fade", "cut"] },
+      shapes: { type: "array", items: shape },
+      markup: { type: "object", additionalProperties: strokes },
+      layout: { type: "object", additionalProperties: { type: "object", properties: { dx: { type: "number" }, dy: { type: "number" }, w: { type: "number" }, h: { type: "number" } } } },
+      canvas: { type: "object", additionalProperties: point },
+    },
+  };
+}

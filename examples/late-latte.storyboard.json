@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "title": "The Late Latte",
+  "persona": "Marcus, busy commuter",
+  "subtitle": "Journey: mobile order-ahead",
+  "cast": {
+    "marcus": { "name": "Marcus", "skin": "tone-4", "hair": "short", "outfit": "jacket" },
+    "leo": { "name": "Leo", "skin": "tone-4", "hair": "curly", "age": "child", "outfit": "hoodie" },
+    "sam": { "name": "Sam", "skin": "tone-1", "hair": "bun", "outfit": "apron" }
+  },
+  "panels": [
+    { "id": "title", "type": "title", "title": "The Late Latte", "subtitle": "Marcus · Tuesday · ordered ahead, 4 min ETA" },
+    {
+      "id": "order-ahead", "scene": "kitchen", "shot": "wide", "label": "Orders while packing lunch",
+      "caption": "7:58 · Packing Leo's lunch, ordering ahead.",
+      "characters": [
+        { "who": "marcus", "pose": "holding-phone", "mood": "focused", "at": "counter", "facing": "left", "device": { "type": "phone", "screen": "./screens/order-status.png" } },
+        { "who": "leo", "pose": "waving", "mood": "excited", "at": "fridge", "facing": "right" }
+      ],
+      "bubbles": [{ "type": "speech", "from": "leo", "text": "Dad! Where's my other shoe?" }],
+      "gestures": [{ "type": "tap", "on": "marcus" }]
+    },
+    {
+      "id": "walking", "scene": "street", "shot": "medium", "label": "Confirmation on the way",
+      "characters": [{ "who": "marcus", "pose": "walking", "mood": "happy", "angle": "side", "facing": "right", "device": "phone" }],
+      "bubbles": [{ "type": "thought", "from": "marcus", "text": "Ready at 8:14. Perfect." }],
+      "gestures": [{ "type": "notification", "on": "marcus" }]
+    },
+    {
+      "id": "in-line", "scene": "coffee-shop", "shot": "wide", "label": "In line anyway",
+      "caption": "8:14 · In line anyway. Is my order even started?",
+      "characters": [
+        { "who": "marcus", "pose": "holding-phone", "mood": "impatient", "at": "counter", "device": "phone" },
+        { "who": "sam", "pose": "standing", "mood": "focused", "at": "barista" }
+      ],
+      "bubbles": [{ "type": "speech", "from": "sam", "text": "Name for the order?" }]
+    },
+    {
+      "id": "checks-app", "scene": "coffee-shop", "shot": "over-the-shoulder", "label": "The app still says 4 min",
+      "characters": [{ "who": "marcus", "pose": "holding-phone", "mood": "frustrated", "device": { "type": "phone", "screen": "./screens/order-status.png" } }],
+      "bubbles": [{ "type": "thought", "from": "marcus", "text": "It said 4 min. That was 12 min ago…" }],
+      "gestures": [{ "type": "tap", "on": "marcus", "at": [0.5, 0.8] }]
+    },
+    { "id": "later", "type": "time", "text": "12 minutes later…", "icon": "clock", "label": "Still waiting" },
+    {
+      "id": "asks", "scene": "coffee-shop", "shot": "close-up", "label": "The workaround: ask a human",
+      "characters": [{ "who": "marcus", "pose": "standing", "mood": "stressed", "at": "counter" }],
+      "bubbles": [{ "type": "speech", "from": "marcus", "text": "Sorry, is order 214 ready?" }]
+    },
+    {
+      "id": "commute", "scene": "transit", "shot": "wide", "label": "Late for the 8:40",
+      "characters": [{ "who": "marcus", "pose": "sitting", "mood": "tired", "at": "seat", "device": "phone" }],
+      "bubbles": [{ "type": "thought", "from": "marcus", "text": "Next time I'll just stand in line." }],
+      "callouts": [{ "text": "Trust lost: he'll skip ordering ahead next time", "target": "marcus" }]
+    }
+  ]
+}

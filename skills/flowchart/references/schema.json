@@ -1,0 +1,390 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Flowchart Kit board",
+  "type": "object",
+  "required": [
+    "title",
+    "nodes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "frames": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "the name on the frame (and the slide title in Play)"
+          },
+          "near": {
+            "description": "[\"right of\" | \"left of\" | \"below\" | \"above\", \"<frame id>\"]: placed next to that frame, in the nearest free spot",
+            "type": "array",
+            "items": [
+              {
+                "enum": [
+                  "right of",
+                  "left of",
+                  "below",
+                  "above"
+                ]
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "dir": {
+            "enum": [
+              "right",
+              "down"
+            ],
+            "description": "\"right\" (default) or \"down\": which way its flow runs"
+          },
+          "notes": {
+            "type": "string",
+            "description": "speaker notes for when it's a slide"
+          },
+          "url": {
+            "type": "string",
+            "description": "a web address for the whole frame (the spec, the epic, the prototype)"
+          },
+          "shapes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "points"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "rect",
+                    "ellipse",
+                    "line",
+                    "arrow",
+                    "path",
+                    "text"
+                  ]
+                },
+                "points": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                },
+                "fill": {
+                  "enum": [
+                    "none",
+                    "light",
+                    "mid",
+                    "dark"
+                  ]
+                },
+                "text": {
+                  "type": "string"
+                },
+                "color": {
+                  "enum": [
+                    "ink",
+                    "grey",
+                    "red",
+                    "blue",
+                    "green",
+                    "yellow"
+                  ]
+                }
+              }
+            }
+          },
+          "size": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      }
+    },
+    "nodes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "enum": [
+              "box",
+              "pill",
+              "diamond",
+              "sticky",
+              "text",
+              "stamp",
+              "link",
+              "card"
+            ],
+            "description": "box | pill | diamond | sticky | text | stamp | link | card (default box)"
+          },
+          "text": {
+            "type": "string",
+            "description": "the words on it"
+          },
+          "frame": {
+            "type": "string",
+            "description": "the frame it lives in (leave out for the loose area)"
+          },
+          "color": {
+            "enum": [
+              "yellow",
+              "pink",
+              "blue",
+              "green",
+              "gray"
+            ],
+            "description": "stickies: yellow | pink | blue | green | gray (default yellow)"
+          },
+          "near": {
+            "type": "string",
+            "description": "stickies and text: the id of the node to sit beside; stamps: the node to sit on top of"
+          },
+          "icon": {
+            "enum": [
+              "cursor",
+              "star",
+              "smiley",
+              "meh",
+              "frown",
+              "heart",
+              "thumbs-up",
+              "thumbs-down",
+              "question",
+              "alert",
+              "check",
+              "cross",
+              "idea",
+              "flag",
+              "clock",
+              "eye",
+              "fire",
+              "dollar"
+            ],
+            "description": "stamps: cursor | star | smiley | meh | frown | heart | thumbs-up | thumbs-down | question | alert | check | cross | idea | flag | clock | eye | fire | dollar"
+          },
+          "at": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "stamps on a node: [x, y] as fractions of it (default [1, 0], its top-right corner)"
+          },
+          "ref": {
+            "type": "string",
+            "description": "cards: a path to a storyboard, panel, wireframe, screen or image"
+          },
+          "url": {
+            "type": "string",
+            "description": "a web address; link cards show it, anything else gets a clickable link badge"
+          },
+          "sketch": {
+            "type": "boolean",
+            "description": "image cards: false shows the picture as it is (default: sketchified in grays to match)"
+          },
+          "product": {
+            "type": "boolean",
+            "description": "true draws it teal: this is where the product shows up"
+          }
+        }
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "node id"
+          },
+          "to": {
+            "type": "string",
+            "description": "node id"
+          },
+          "label": {
+            "type": "string",
+            "description": "a word or two on the arrow (\"yes\", \"no\", \"after 10 min\")"
+          },
+          "style": {
+            "enum": [
+              "solid",
+              "dashed"
+            ],
+            "description": "\"solid\" (default) or \"dashed\" (maybe, later, a weaker link)"
+          }
+        }
+      }
+    },
+    "present": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Frame ids in presenting order."
+    },
+    "transition": {
+      "enum": [
+        "fade",
+        "cut"
+      ]
+    },
+    "shapes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "points"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "rect",
+              "ellipse",
+              "line",
+              "arrow",
+              "path",
+              "text"
+            ]
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "fill": {
+            "enum": [
+              "none",
+              "light",
+              "mid",
+              "dark"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "color": {
+            "enum": [
+              "ink",
+              "grey",
+              "red",
+              "blue",
+              "green",
+              "yellow"
+            ]
+          }
+        }
+      }
+    },
+    "markup": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "points"
+          ],
+          "properties": {
+            "points": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "color": {
+              "enum": [
+                "ink",
+                "grey",
+                "red",
+                "blue",
+                "green",
+                "yellow"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "dx": {
+            "type": "number"
+          },
+          "dy": {
+            "type": "number"
+          },
+          "w": {
+            "type": "number"
+          },
+          "h": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "canvas": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "minItems": 2,
+        "maxItems": 2
+      }
+    }
+  }
+}

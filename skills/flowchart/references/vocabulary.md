@@ -1,0 +1,127 @@
+# Flowchart vocabulary
+
+Generated from the tool. Query live with `fc vocab`.
+
+## Node types
+
+### `box`: Step
+
+A step: something a person or the product does. The default, so you can leave `type` out.
+
+```json
+{"text":"Orders a latte ahead","frame":"happy"}
+```
+
+### `pill`: Start / end
+
+Where a flow starts or ends.
+
+```json
+{"type":"pill","text":"Leaves home","frame":"happy"}
+```
+
+### `diamond`: Decision
+
+A question with more than one way out. Label the links that leave it ("yes", "no").
+
+```json
+{"type":"diamond","text":"Ready on time?","frame":"happy"}
+```
+
+### `sticky`: Sticky
+
+A sticky note: a question, an insight, an idea. `near` sticks it beside a node; `color` picks the paper.
+
+```json
+{"type":"sticky","text":"Is \"4 min\" ever true at 8am?","color":"pink","near":"ready"}
+```
+
+### `text`: Text
+
+Loose hand-written words: a heading, a lane name, a comment. `near` puts it beside a node.
+
+```json
+{"type":"text","text":"Nobody tells them it's late","near":"wait"}
+```
+
+### `stamp`: Stamp
+
+A little marker icon: a click cursor on a screen, a star on what matters, a smiley or a frown on a feeling. `near` puts it on top of a node, `at` says where on it.
+
+```json
+{"type":"stamp","icon":"cursor","near":"status-screen","at":[0.5,0.82]}
+```
+
+### `link`: Link
+
+A web page as a card: a site, a ticket, a doc, a prototype. `text` is its title, `url` where it goes. (Any other node can carry a `url` too.)
+
+```json
+{"type":"link","text":"ORDER-412: late order alerts","url":"https://example.atlassian.net/browse/ORDER-412","near":"late-alert"}
+```
+
+### `card`: Card
+
+A storyboard, a storyboard panel, a wireframe flow or screen, or an image, pointed at by `ref` and drawn by its own kit. Link to and from it like any step.
+
+```json
+{"type":"card","ref":"./late-latte.storyboard.json#in-line","frame":"late"}
+```
+
+## Node properties
+
+- `type`: box | pill | diamond | sticky | text | stamp | link | card (default box)
+- `text`: the words on it
+- `frame`: the frame it lives in (leave out for the loose area)
+- `color`: stickies: yellow | pink | blue | green | gray (default yellow)
+- `near`: stickies and text: the id of the node to sit beside; stamps: the node to sit on top of
+- `icon`: stamps: cursor | star | smiley | meh | frown | heart | thumbs-up | thumbs-down | question | alert | check | cross | idea | flag | clock | eye | fire | dollar
+- `at`: stamps on a node: [x, y] as fractions of it (default [1, 0], its top-right corner)
+- `ref`: cards: a path to a storyboard, panel, wireframe, screen or image
+- `sketch`: image cards: false shows the picture as it is (default: sketchified in grays to match)
+- `url`: a web address; link cards show it, anything else gets a clickable link badge
+- `product`: true draws it teal: this is where the product shows up
+
+## Sticky colors
+
+- `yellow`: the default: notes, observations
+- `pink`: questions, worries, pain points
+- `blue`: ideas
+- `green`: what works, decisions made
+- `gray`: parked, out of scope
+
+## Stamps
+
+- `cursor`: a click or tap happens here
+- `star`: something special, the best bit
+- `smiley`: this feels good
+- `meh`: this feels so-so
+- `frown`: this feels bad
+- `heart`: people love this
+- `thumbs-up`: yes, keep it
+- `thumbs-down`: no, cut it
+- `question`: an open question
+- `alert`: a problem or a risk
+- `check`: done, decided, works
+- `cross`: wrong, broken, doesn't work
+- `idea`: an idea
+- `flag`: a milestone, or come back to this
+- `clock`: waiting, or it takes time
+- `eye`: people look here
+- `fire`: urgent, or hot
+- `dollar`: money changes hands
+
+## Frame properties
+
+- `title`: the name on the frame (and the slide title in Play)
+- `near`: ["right of" | "left of" | "below" | "above", "<frame id>"]: placed next to that frame, in the nearest free spot
+- `dir`: "right" (default) or "down": which way its flow runs
+- `notes`: speaker notes for when it's a slide
+- `url`: a web address for the whole frame (the spec, the epic, the prototype)
+
+## Link properties
+
+- `from`: node id
+- `to`: node id
+- `label`: a word or two on the arrow ("yes", "no", "after 10 min")
+- `style`: "solid" (default) or "dashed" (maybe, later, a weaker link)
