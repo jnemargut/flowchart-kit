@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatJSON } from "../../vendor/sketch/json";
 import { kitScript, nearby, resolveCards } from "../cards";
@@ -94,7 +94,7 @@ const STARTER = (title: string): FlowchartFile => ({
 const THINK_ROOT = join(SKILL_ROOT, "..", "low-fi-think");
 
 /** Copy the whole skill folder (docs, bundled script, editor, fonts, examples), and /low-fi-think next to it. */
-function installTo(dst: string): string {
+function installTo(dst: string, bake?: (dir: string) => string): string {
   if (resolve(dst) !== resolve(SKILL_ROOT)) {
     rmSync(dst, { recursive: true, force: true });
     mkdirSync(dirname(dst), { recursive: true });
@@ -105,8 +105,22 @@ function installTo(dst: string): string {
     rmSync(think, { recursive: true, force: true });
     cpSync(THINK_ROOT, think, { recursive: true });
   }
+  if (bake) { bakeSkillDir(dst, bake(dst)); if (existsSync(think)) bakeSkillDir(think, bake(think)); }
   return dst;
 }
+
+/**
+ * Agents other than Claude Code don't fill in ${CLAUDE_SKILL_DIR}, so copies made for them get the folder's real
+ * path written into their docs (absolute for a home install, relative to the project for a project install).
+ */
+function bakeSkillDir(dir: string, path: string) {
+  for (const f of readdirSync(dir, { recursive: true, encoding: "utf8" })) {
+    if (!f.endsWith(".md")) continue;
+    const file = join(dir, f), text = readFileSync(file, "utf8");
+    if (text.includes("${CLAUDE_SKILL_DIR}")) writeFileSync(file, text.replaceAll("${CLAUDE_SKILL_DIR}", path));
+  }
+}
+
 
 /** Each kit the thinking can use, where it's installed, and the command that runs it. */
 function kits() {
@@ -246,12 +260,12 @@ async function main() {
     case "install": {
       const done: string[] = [];
       if (flags.project) {
-        done.push(installTo(resolve(".claude/skills/flowchart")), installTo(resolve(".agents/skills/flowchart")));
+        done.push(installTo(resolve(".claude/skills/flowchart")), installTo(resolve(".agents/skills/flowchart"), (d) => relative(process.cwd(), d)));
         upsertBlock("AGENTS.md", agentsBlock(".agents/skills/flowchart"));
         done.push("AGENTS.md (pointer for agents that don't load skills on their own)");
       } else {
         done.push(installTo(join(homedir(), ".claude/skills/flowchart")));
-        if (flags.codex) done.push(installTo(join(homedir(), ".codex/skills/flowchart")));
+        if (flags.codex) done.push(installTo(join(homedir(), ".codex/skills/flowchart"), (d) => d));
       }
       console.log(`✓ flowchart skill installed (with /low-fi-think next to it):\n  ${done.join("\n  ")}\n\nRestart your agent, then type: /flowchart <a flow or board>…\nor /low-fi-think <a problem, a request, some links>…`);
       return;
