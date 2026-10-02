@@ -1,4 +1,5 @@
 /** Checks a flowchart file. Errors say exactly what to change; warnings are nudges toward a clearer board. */
+import { findUndrawable, undrawableHint } from "../vendor/sketch/glyphs";
 import { formatIssues, suggest, type Issue, type Result } from "../vendor/sketch/suggest";
 import { parseRef } from "./refs";
 import { isCrop } from "../vendor/sketch/crop";
@@ -154,6 +155,7 @@ export function validate(doc: FlowchartFile): Result {
       }
     } catch (e) { err("(layout)", `Couldn't lay this out: ${(e as Error).message}`); }
   }
+  for (const u of findUndrawable(doc)) { const h = undrawableHint(u.chars); warn(u.path, h.message, h.hint); }
   return { ok: !errors.length, errors, warnings };
 }
 

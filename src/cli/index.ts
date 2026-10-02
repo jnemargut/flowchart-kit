@@ -26,6 +26,7 @@ Usage: ${RUN} <command> [options]
   new <file> [--title "…"]        Create a starter board
   vocab [--json]                  Node types, sticky colors, stamps, frame and link properties
   validate <file> [--json]        Check a board; errors include fixes
+  kits                            Which kits are installed (Storyboard, Wireframe, Flowchart) and how to run each
   cards [file|dir]                Storyboards and wireframes nearby (with panels/screens), and how each card on a board is doing
   dev [file] [--port 4500]        Open the canvas editor (--no-open); edits save to the file live
   render <file>[#frame] [--scale 1.5]
@@ -89,13 +90,38 @@ const STARTER = (title: string): FlowchartFile => ({
   ],
 });
 
-/** Copy the whole skill folder (docs, bundled script, editor, fonts, examples). */
+/** The second skill that ships with this one: /low-fi-think (it plans the thinking and uses all three kits). */
+const THINK_ROOT = join(SKILL_ROOT, "..", "low-fi-think");
+
+/** Copy the whole skill folder (docs, bundled script, editor, fonts, examples), and /low-fi-think next to it. */
 function installTo(dst: string): string {
-  if (resolve(dst) === resolve(SKILL_ROOT)) return dst;
-  rmSync(dst, { recursive: true, force: true });
-  mkdirSync(dirname(dst), { recursive: true });
-  cpSync(SKILL_ROOT, dst, { recursive: true, filter: (src) => !src.includes(".flowchart-cache") });
+  if (resolve(dst) !== resolve(SKILL_ROOT)) {
+    rmSync(dst, { recursive: true, force: true });
+    mkdirSync(dirname(dst), { recursive: true });
+    cpSync(SKILL_ROOT, dst, { recursive: true, filter: (src) => !src.includes(".flowchart-cache") });
+  }
+  const think = join(dirname(dst), "low-fi-think");
+  if (existsSync(join(THINK_ROOT, "SKILL.md")) && resolve(think) !== resolve(THINK_ROOT)) {
+    rmSync(think, { recursive: true, force: true });
+    cpSync(THINK_ROOT, think, { recursive: true });
+  }
   return dst;
+}
+
+/** Each kit the thinking can use, where it's installed, and the command that runs it. */
+function kits() {
+  const found: [string, string, string | undefined][] = [
+    ["Storyboard Kit", "sb", kitScript("storyboard")],
+    ["Wireframe Kit", "wf", kitScript("wireframe")],
+    ["Flowchart Kit", "fc", SELF],
+  ];
+  for (const [name, short, path] of found) console.log(path ? `✓ ${name.padEnd(15)} ${short}   docs: ${join(dirname(dirname(path)), "SKILL.md")}` : `✗ ${name.padEnd(15)} not installed (${short === "sb" ? "https://github.com/jnemargut/storyboard-kit" : "https://github.com/jnemargut/wireframe-kit"})`);
+  const have = found.filter(([, , p]) => p);
+  // shell functions (not variables): they work the same in bash and zsh
+  console.log(`\nDefine these once in your shell (bash or zsh), then use ${have.map(([, s]) => s).join(", ")} like commands:\n`);
+  for (const [, short, path] of have) console.log(`${short}() { node "${path}" "$@"; }`);
+  const missing = found.filter(([, , p]) => !p).map(([n]) => n);
+  if (missing.length) console.log(`\nWithout ${missing.join(" and ")}, /low-fi-think works around ${missing.length > 1 ? "them" : "it"} (see its SKILL.md).`);
 }
 
 function upsertBlock(path: string, block: string) {
@@ -161,6 +187,7 @@ async function main() {
       process.exit(r.ok ? 0 : 1);
     }
     case "cards": return cards(pos[0]);
+    case "kits": return kits();
     case "format": {
       const { doc, abs } = load(pos[0]);
       writeFileSync(abs, formatJSON(doc));
@@ -226,7 +253,7 @@ async function main() {
         done.push(installTo(join(homedir(), ".claude/skills/flowchart")));
         if (flags.codex) done.push(installTo(join(homedir(), ".codex/skills/flowchart")));
       }
-      console.log(`✓ flowchart skill installed:\n  ${done.join("\n  ")}\n\nRestart your agent, then type: /flowchart <what you're thinking through>…`);
+      console.log(`✓ flowchart skill installed (with /low-fi-think next to it):\n  ${done.join("\n  ")}\n\nRestart your agent, then type: /flowchart <a flow or board>…\nor /low-fi-think <a problem, a request, some links>…`);
       return;
     }
     case undefined: case "help": case "--help": case "-h":

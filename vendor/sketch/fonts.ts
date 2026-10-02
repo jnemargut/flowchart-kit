@@ -12,8 +12,12 @@ export const FONT_DIR = (() => {
 })();
 
 /** The fonts drawings use, plus their licences (copied into each skill's assets/fonts). */
-export const DRAWING_FONTS = ["PermanentMarker-Regular.ttf", "PatrickHand-Regular.ttf"];
-export const FONT_LICENSES = ["LICENSE-Apache-PermanentMarker.txt", "OFL-PatrickHand.txt"];
+/** The marker fonts, plus IBM Plex Mono: it draws what they can't (→ ← ↑ ↓ ✓ ≠ ≤ ≥ ™) and labels file names. */
+export const DRAWING_FONTS = ["PermanentMarker-Regular.ttf", "PatrickHand-Regular.ttf", "IBMPlexMono-Regular.ttf"];
+export const FONT_LICENSES = ["LICENSE-Apache-PermanentMarker.txt", "OFL-PatrickHand.txt", "OFL-IBMPlexMono.txt"];
+/** What every kit's build copies into its skill's assets/fonts. */
+export const FONT_FILES = [...DRAWING_FONTS, ...FONT_LICENSES];
+
 
 let buffers: Uint8Array[] | undefined;
 /** Font buffers for resvg. */
@@ -23,5 +27,5 @@ export const drawingFonts = () => (buffers ??= DRAWING_FONTS.map((f) => readFile
 export function fontFaceCss(): string {
   const face = (family: string, file: string) =>
     `@font-face{font-family:"${family}";src:url(data:font/ttf;base64,${readFileSync(join(FONT_DIR, file)).toString("base64")}) format("truetype");}`;
-  return face("Permanent Marker", "PermanentMarker-Regular.ttf") + face("Patrick Hand", "PatrickHand-Regular.ttf");
+  return face("Permanent Marker", "PermanentMarker-Regular.ttf") + face("Patrick Hand", "PatrickHand-Regular.ttf") + face("IBM Plex Mono", "IBMPlexMono-Regular.ttf");
 }

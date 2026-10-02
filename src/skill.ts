@@ -204,5 +204,8 @@ For flowcharts, user flows, sticky-note boards, or one canvas holding storyboard
 - \`${CLI} dev <file>\` opens the canvas editor (run it in the background). The designer's edits save into the
   same file: re-read before editing, and keep \`layout\`, \`canvas\`, \`shapes\` and \`markup\`.
 - \`${CLI} render <file>\` draws the board; \`${CLI} export <file> --pdf|--pptx\` makes a deck, one slide per frame.
+
+To think a request or a problem through with storyboards, wireframes and a board together (for example "the PM
+wants X, here are the Jiras"), read \`${skillDir.replace(/flowchart$/, "low-fi-think")}/SKILL.md\` and follow it.
 <!-- flowchart:end -->
 `;

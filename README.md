@@ -56,7 +56,8 @@ git clone https://github.com/jnemargut/flowchart-kit.git
 node flowchart-kit/skills/flowchart/scripts/flowchart.mjs install
 ```
 
-That drops the skill into `~/.claude/skills/flowchart`. Restart Claude Code and `/flowchart` is ready to go.
+That drops two skills into `~/.claude/skills`: `/flowchart`, and `/low-fi-think` (more on that below). Restart
+Claude Code and they're ready to go.
 
 - **Codex?** Add `--codex` to the install command.
 - **Just one project?** Run `install --project` from inside that project.
@@ -84,6 +85,32 @@ canvas in your browser. Then keep talking to it:
 - *"make me a deck of this"*
 
 Or just click around yourself. Your edits and the agent's land in the same file, live.
+
+## Thinking it through: /low-fi-think
+
+The kits are great when you know what you want: a storyboard, some screens, a board. Most days, though, it starts
+with someone else's ask. "The PM wants me to do PAY-218. I need to rethink it. Here are the two Jiras."
+
+That's what `/low-fi-think` is for. It ships with Flowchart Kit and uses all three kits:
+
+1. **It reads the ask.** Tickets, linked tickets, docs, threads, whatever your agent can open with the tools you've
+   given it (a Jira MCP, `gh`, a docs connector). What's being asked, why, for whom, and what's missing.
+2. **It works out what kind of thinking it needs.** Is the real question what people do today (a storyboard), what
+   the screens are (wireframes), where the paths branch and break (a flow), or which of a few directions (options
+   side by side)? Usually it's two or three of those.
+3. **It says the plan in a breath and gets going.** No twenty questions. What it can't answer becomes a pink sticky.
+4. **It builds them in order, wired together.** The storyboard of today, the screens the ask implies, and one board
+   that holds it all: *The ask* (the tickets as link cards), *What actually happens*, *The ask as a flow* (with where
+   it breaks circled in red), *Options*, and *Questions for the PM*. Frames in story order, so it's already a deck.
+5. **It hands it over.** The board open in your browser, what it thinks in a few sentences, the questions it would
+   take back, and what it assumed.
+
+```
+/low-fi-think The PM wants me to do PAY-218, I need to rethink it. They linked PAY-218 and PAY-221.
+```
+
+Don't have Storyboard Kit or Wireframe Kit? It works around them and tells you what it's missing. `fc kits` shows
+what's installed.
 
 ## What's in the box
 
@@ -177,10 +204,11 @@ npm run e2e        # clicks around the real editor in Chrome
 npm run e2e:kits   # copies from Storyboard Kit and Wireframe Kit, pastes onto a board
 ```
 
-`src/vocab.ts` is the single source of truth for what can go on a board. The schema, the checker, the docs and the
+`src/think.ts` is `/low-fi-think`'s instructions (it's all words: no code of its own). `src/vocab.ts` is the single
+source of truth for what can go on a board. The schema, the checker, the docs and the
 palette all read from it. Layout is [dagre](https://github.com/dagrejs/dagre) inside each frame, plus a little
-nearest-free-spot search for the frames themselves. `skills/flowchart/` is generated from `src/` and checked in,
-so you can install straight from a clone.
+nearest-free-spot search for the frames themselves. `skills/flowchart/` and `skills/low-fi-think/` are generated
+from `src/` and checked in, so you can install straight from a clone.
 
 The marker drawing bits (tokens, fonts, the wobble, sketchify, PNG rendering, rich text, the drawing toolbar,
 pan and zoom) are shared by all three kits. They live in Storyboard Kit's `src/sketch/`, and `vendor/sketch/` here

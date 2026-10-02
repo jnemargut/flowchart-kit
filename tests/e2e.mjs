@@ -31,6 +31,9 @@ ok("export writes SVG, PDF, PPTX and JSON Canvas", ["svg", "pdf", "pptx", "canva
 const canvas = JSON.parse(readFileSync(join(dir, "late-order.canvas"), "utf8"));
 ok("JSON Canvas has groups, links and file cards", canvas.nodes.some((n) => n.type === "group") && canvas.nodes.some((n) => n.type === "link") && canvas.nodes.some((n) => n.type === "file") && canvas.edges.length === 9);
 ok("vocab lists stamps", cli("vocab").includes("thumbs-up"));
+ok("kits lists what's installed", cli("kits").includes("Flowchart Kit"));
+execFileSync(process.execPath, [FC, "install", "--project"], { cwd: dir, encoding: "utf8" });
+ok("install brings /low-fi-think along", existsSync(join(dir, ".claude/skills/flowchart/SKILL.md")) && existsSync(join(dir, ".claude/skills/low-fi-think/SKILL.md")) && existsSync(join(dir, ".claude/skills/low-fi-think/references/plays.md")) && readFileSync(join(dir, "AGENTS.md"), "utf8").includes("low-fi-think/SKILL.md"));
 let bad = "";
 writeFileSync(join(dir, "bad.flowchart.json"), JSON.stringify({ title: "x", nodes: { a: { type: "dimond", text: "?" }, b: { type: "stamp", icon: "smile" } }, links: [{ from: "a", to: "c" }] }));
 try { cli("validate", join(dir, "bad.flowchart.json")); } catch (e) { bad = String(e.stdout); }
