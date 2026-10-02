@@ -43,7 +43,8 @@ await new Promise((r) => server.stdout.on("data", (d) => String(d).includes("loc
 const actual = await new Promise((r) => { r(port); });
 const url = `http://localhost:${actual}/`;
 const browser = await chromium.launch({ channel: "chrome" });
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, permissions: ["clipboard-read", "clipboard-write"] });
+const page = await ctx.newPage();
 page.setDefaultTimeout(8000);
 const errors = [];
 process.on("uncaughtException", (e) => { console.error(e); server.kill(); process.exit(1); });
@@ -160,7 +161,7 @@ await page.evaluate(() => { const dt = new DataTransfer(); dt.setData("text/plai
 await until(() => Object.values(read().nodes).some((n) => n.type === "link" && n.url?.includes("figma.com")));
 ok("pasting a URL makes a link card", Object.values(read().nodes).some((n) => n.type === "link" && n.url === "https://www.figma.com/proto/abc123/late-order"));
 
-// double-click empty space: a step right there
+// double-click empty space does nothing; double-click a step edits its words in place
 await page.keyboard.press("Escape");
 const empty = await page.evaluate(() => {
   const { L, view } = window.__fc;
@@ -168,12 +169,20 @@ const empty = await page.evaluate(() => {
   const c = document.querySelector(".canvas").getBoundingClientRect();
   return { x: c.left + view.x + (f.x + 120) * view.k, y: c.top + view.y + (f.y + f.h + 140) * view.k };
 });
+const before2 = Object.keys(read().nodes).length;
 await page.mouse.dblclick(empty.x, empty.y);
+await sleep(400);
+ok("double-clicking empty space doesn't make anything", Object.keys(read().nodes).length === before2 && (await page.locator(".inline-edit").count()) === 0);
+await page.keyboard.press("Meta+0");
+await sleep(300);
+const goAt = await at("go");
+await page.mouse.dblclick(goAt.x, goAt.y);
 await page.waitForSelector(".inline-edit");
+await page.keyboard.press("Meta+a");
 await page.keyboard.type("A whole new thought");
 await page.keyboard.press("Enter");
-await until(() => Object.values(read().nodes).some((n) => n.text === "A whole new thought"));
-ok("double-clicking empty space adds a step", true);
+await until(() => read().nodes.go?.text === "A whole new thought");
+ok("double-clicking a step edits its words in place", read().nodes.go?.text === "A whole new thought", read().nodes.go?.text);
 
 // Cmd+B while typing: bold
 const fresh = Object.entries(read().nodes).find(([, n]) => n.text === "A whole new thought")[0];
@@ -220,6 +229,95 @@ await page.keyboard.press("Meta+z");
 await until(() => JSON.stringify(read().frames.late.shapes) !== before);
 ok("undo takes the drawing back", !read().frames.late.shapes);
 
+// arrows: style them from the inspector
+await page.keyboard.press("Escape");
+await page.keyboard.press("Meta+0");
+await sleep(300);
+await page.locator("svg.board text[data-edge]").first().click({ force: true });
+await page.waitForSelector(".inspector h3:text('Arrow')");
+const edgeIdx = Number((await sel())[0].slice(5));
+await page.locator(".inspector button", { hasText: /^Angled$/ }).click();
+await page.locator(".inspector button", { hasText: /^Dotted$/ }).click();
+await page.locator(".inspector button", { hasText: /^None$/ }).click();
+await until(() => read().links[edgeIdx]?.shape === "angled" && read().links[edgeIdx]?.style === "dotted" && read().links[edgeIdx]?.head === "none");
+ok("an arrow can be angled, dotted and headless", read().links[edgeIdx]?.shape === "angled" && read().links[edgeIdx]?.style === "dotted" && read().links[edgeIdx]?.head === "none", JSON.stringify(read().links[edgeIdx]));
+
+// connect onto a particular dot: that side is kept
+await page.keyboard.press("Escape");
+const ord = await at("order");
+await page.mouse.move(ord.x, ord.y);
+await sleep(200);
+const rightDot = page.locator(".dot-handle[data-side='right']");
+const rd = await rightDot.boundingBox();
+const topOfGo = await page.evaluate(() => {
+  const { L, view } = window.__fc;
+  const b = L.nodes.go;
+  const c = document.querySelector(".canvas").getBoundingClientRect();
+  return { x: c.left + view.x + (b.x + b.w / 2) * view.k, y: c.top + view.y + b.y * view.k - 16 };
+});
+await page.mouse.move(rd.x + rd.width / 2, rd.y + rd.height / 2);
+await page.mouse.down();
+await page.mouse.move(topOfGo.x, topOfGo.y + 30, { steps: 8 });
+await page.mouse.move(topOfGo.x, topOfGo.y, { steps: 4 });
+ok("dragging over a box shows its dots", (await page.locator(".dot-handle.target").count()) === 4);
+await page.mouse.up();
+await until(() => read().links.some((l) => l.from === "order" && l.to === "go"));
+const og = read().links.find((l) => l.from === "order" && l.to === "go");
+ok("dropping on a dot pins that side", og?.toSide === "top" && og?.fromSide === "right", JSON.stringify(og));
+
+// box looks from the inspector
+await click(await at("wait"));
+await page.locator(".inspector button", { hasText: /^Large$/ }).click();
+await page.locator(".inspector .swatches button[aria-label='yellow']").first().click();
+await page.locator(".inspector .swatches button[aria-label='red']").last().click();
+await page.locator(".inspector button", { hasText: /^Thick$/ }).click();
+await until(() => read().nodes.wait?.weight === "thick");
+const w8 = read().nodes.wait;
+ok("a box can change text size, fill, border and weight", w8.size === "l" && w8.fill === "yellow" && w8.stroke === "red" && w8.weight === "thick", JSON.stringify(w8));
+ok("editing by hand pins what's on the board", typeof read().layout?.leave?.x === "number");
+
+// layering: to back puts it first
+await click(await at("wait"));
+await page.keyboard.press("Meta+Shift+BracketLeft");
+await until(() => Object.keys(read().nodes)[0] === "wait");
+ok("To back moves it to the back", Object.keys(read().nodes)[0] === "wait");
+
+// cut, then paste it back
+await click(await at("eta"));
+await page.keyboard.press("Meta+x");
+await until(() => !read().nodes.eta);
+ok("Cmd+X cuts", !read().nodes.eta);
+const clip = await page.evaluate(async () => (await navigator.clipboard.read()).flatMap((i) => i.types));
+ok("what's copied is a picture (for Slack) plus the things themselves", clip.includes("image/png"), clip.join(", "));
+await page.mouse.move(700, 600);
+await page.keyboard.press("Meta+v");
+await until(() => Object.values(read().nodes).some((n) => n.text === "The app promises 4 minutes"));
+ok("pasting brings the sticky back, not a picture of it", Object.values(read().nodes).some((n) => n.type === "sticky" && n.text === "The app promises 4 minutes"));
+
+// crop a card
+await page.keyboard.press("Escape");
+await page.keyboard.press("Meta+0");
+await sleep(300);
+await click(await at("screen", 0.5, 0.15));
+await sleep(200);
+await page.locator(".inspector button", { hasText: /^Crop…$/ }).click();
+await page.waitForSelector("[role=dialog][aria-label='Crop the picture']");
+await sleep(600);
+const se = await page.locator("[role=dialog] span").nth(4).boundingBox();
+await page.mouse.move(se.x + se.width / 2, se.y + se.height / 2);
+await page.mouse.down();
+await page.mouse.move(se.x - 40, se.y - 160, { steps: 6 });
+await page.mouse.up();
+await page.locator("[role=dialog] button", { hasText: /^Crop$/ }).click();
+await until(() => Array.isArray(read().nodes.screen?.crop));
+ok("a card can be cropped", Array.isArray(read().nodes.screen?.crop) && read().nodes.screen.crop[3] < 1, JSON.stringify(read().nodes.screen?.crop));
+
+// tidy up the whole board
+await page.keyboard.press("Escape");
+await page.locator(".inspector button", { hasText: "Tidy up the whole board" }).click();
+await until(() => typeof read().layout?.leave?.x !== "number");
+ok("Tidy up lays the board out again", typeof read().layout?.leave?.x !== "number");
+
 // the agent edits the file: the canvas follows
 const agent = read();
 agent.nodes["from-agent"] = { type: "sticky", text: "Added by the agent", color: "green", frame: "ideas" };
@@ -253,6 +351,7 @@ for (const fmt of ["png", "svg", "pdf", "pptx", "canvas"]) {
 ok("the board is still valid", /is valid/.test(cli("validate", file)));
 ok("no console errors", !errors.length, errors.join("\n"));
 
+await ctx.close();
 await browser.close();
 server.kill();
 console.log(failures ? `\n${failures} failed` : "\nall passed");

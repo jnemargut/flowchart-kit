@@ -21,13 +21,28 @@ export interface FNode {
   at?: [number, number];
   /** Cards: "./x.storyboard.json", "./x.storyboard.json#panel", "./x.wireframe.json#screen", or an image. */
   ref?: string;
+  /** Cards: show only part of the picture, as fractions [left, top, right, bottom] (the original stays as it is). */
+  crop?: [number, number, number, number];
   /** Image cards: false shows the picture as it is, instead of sketchified in grays. */
   sketch?: boolean;
   /** A web address (a site, a ticket, a prototype). Link cards show it; anything else gets a little link badge you can click. */
   url?: string;
   /** Teal outline: this is where the product shows up (steps without it are the person's own world). */
   product?: boolean;
+  /** Text size: s, m (default), l, xl. */
+  size?: TextSize;
+  /** Fill: white, paper, light, mid, dark, yellow, pink, blue, green, teal, none. */
+  fill?: string;
+  /** Border: a marker color, teal, or none. */
+  stroke?: string;
+  /** Border weight: thin, normal (default), thick. */
+  weight?: Weight;
 }
+
+export type TextSize = "s" | "m" | "l" | "xl";
+export type Connector = "curved" | "angled" | "straight";
+export type Weight = "thin" | "normal" | "thick";
+export type Side4 = "left" | "right" | "top" | "bottom";
 
 export interface Frame {
   title?: string;
@@ -49,12 +64,27 @@ export interface Link {
   from: string;
   to: string;
   label?: string;
-  /** "dashed" for maybe, later, or a weaker connection. */
-  style?: "solid" | "dashed";
+  /** "dashed" for maybe or later, "dotted" for a weaker connection. */
+  style?: "solid" | "dashed" | "dotted";
+  /** Connector shape: curved, angled (right-angle elbows) or straight. Default: the board's `connectors`. */
+  shape?: Connector;
+  /** Arrowheads: end (default), start, both, or none (a plain line). */
+  head?: "end" | "start" | "both" | "none";
+  /** A marker color (default gray ink). */
+  color?: string;
+  /** Line weight: thin, normal (default), thick. */
+  weight?: Weight;
+  /** Which side of each box it leaves and arrives on. Leave out and the layout picks. */
+  fromSide?: Side4;
+  toSide?: Side4;
 }
 
-/** Sparse manual adjustments written by the editor, keyed by node id. */
-export interface Nudge { dx?: number; dy?: number; w?: number; h?: number }
+/**
+ * Manual adjustments written by the editor, keyed by node id. `x`/`y` pin a node in place (frame coordinates):
+ * the editor pins everything once you edit by hand, so later changes never shuffle what you've arranged.
+ * Unpinned nodes are laid out automatically, plus any `dx`/`dy` nudge.
+ */
+export interface Nudge { x?: number; y?: number; dx?: number; dy?: number; w?: number; h?: number }
 
 export interface FlowchartFile {
   $schema?: string;
@@ -64,6 +94,8 @@ export interface FlowchartFile {
   links?: Link[];
   /** Frames in presenting order. Default: the order they're listed. */
   present?: string[];
+  /** How links are drawn unless a link says otherwise: "curved" (default), "angled" or "straight". */
+  connectors?: Connector;
   /** Between slides in Play: "fade" (default) or "cut". */
   transition?: "fade" | "cut";
   /** The designer's drawings outside any frame, in canvas coordinates. */

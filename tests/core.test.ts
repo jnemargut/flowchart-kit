@@ -170,6 +170,43 @@ describe("render and export", () => {
   });
 });
 
+describe("staying put", () => {
+  it("pinned boxes don't move when an arrow flips", () => {
+    const d0 = example();
+    const L0 = layoutBoard(d0);
+    const flipped = { ...d0, links: d0.links!.map((l) => (l.from === "order" && l.to === "ready" ? { ...l, from: "ready", to: "order" } : l)) };
+    const pinned = M.pinAll(d0, L0, flipped);
+    const L1 = layoutBoard(pinned);
+    for (const id of ["leave", "order", "ready", "go", "wait", "ask"]) expect([L1.nodes[id].x, L1.nodes[id].y], id).toEqual([L0.nodes[id].x, L0.nodes[id].y]);
+  });
+  it("puts a new step next to what it's linked from", () => {
+    const d0 = example();
+    const L0 = layoutBoard(d0);
+    const r = M.addNode(d0, { text: "Next", frame: "happy" }, "next");
+    const d1 = M.pinAll(d0, L0, M.addLink(r.doc, "go", "next"));
+    const L1 = layoutBoard(d1);
+    const n = L1.nodes.next, g = L1.nodes.go;
+    expect(n.x).toBeGreaterThan(g.x + g.w - 1);
+    expect(Math.abs(n.y + n.h / 2 - (g.y + g.h / 2))).toBeLessThan(80);
+    for (const b of Object.values(L1.nodes)) if (b.id !== "next" && b.type !== "sticky") expect(overlap(n, b), b.id).toBe(false);
+  });
+  it("tidies up again on request", () => {
+    const d0 = example();
+    const L0 = layoutBoard(d0);
+    const pinned = M.pinAll(d0, L0, { ...d0, layout: { ...(d0.layout ?? {}), go: { dx: 300 } } });
+    expect(M.autoLayout(pinned, layoutBoard(pinned)).layout?.go).toBeUndefined();
+  });
+  it("draws angled and straight connectors, and arrowheads where asked", () => {
+    const d = example();
+    d.links = d.links!.map((l, i) => (i === 0 ? { ...l, shape: "angled" as const, head: "both" as const } : i === 1 ? { ...l, shape: "straight" as const, head: "none" as const } : l));
+    const L = layoutBoard(d);
+    expect(L.edges[0].d).toMatch(/Q/);
+    expect(L.edges[1].d).toMatch(/^M[\d.\s-]+L[\d.\s-]+$/);
+    expect(L.edges[0].head).toBe("both");
+    expect(L.edges[1].head).toBe("none");
+  });
+});
+
 describe("editing", () => {
   it("renames a node and everything that points at it", () => {
     const d = M.renameNode(example(), "check", "checks-app");

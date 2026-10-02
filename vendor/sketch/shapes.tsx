@@ -4,13 +4,22 @@ import { C, FONT, MARKER } from "./tokens";
 
 /** "rect" | "ellipse" | "line" | "arrow" | "path" | "text" (each kit's vocabulary checks the values). */
 export type SketchShapeType = string;
-/** "none" | "light" | "mid" | "dark" */
+/** "none" | "light" | "mid" | "dark" | "white" */
 export type SketchFill = string;
-/** "ink" | "grey" | "red" | "blue" | "green" | "yellow" */
+/** "ink" | "grey" | "red" | "blue" | "green" | "yellow" (shapes also take "none": no outline) */
 export type SketchColor = string;
 export const SHAPE_TYPES = ["rect", "ellipse", "line", "arrow", "path", "text"] as const;
-export const SHAPE_FILLS = ["none", "light", "mid", "dark"] as const;
+/** "white" is solid paper white with no offset: good for covering part of a picture. */
+export const SHAPE_FILLS = ["none", "light", "mid", "dark", "white"] as const;
 export const MARKER_COLORS = ["ink", "grey", "red", "blue", "green", "yellow"] as const;
+/** A shape's outline: any marker color, or "none". */
+export const SHAPE_COLORS = [...MARKER_COLORS, "none"] as const;
+export const SHAPE_WEIGHTS = ["thin", "normal", "thick"] as const;
+export const TEXT_SIZES = ["s", "m", "l", "xl"] as const;
+const WEIGHT: Record<string, number> = { thin: 1.3, normal: 2.4, thick: 4.4 };
+const TEXT_SIZE: Record<string, number> = { s: 12, m: 16, l: 22, xl: 32 };
+/** Font size of a "text" shape. */
+export const shapeTextSize = (s: Pick<SketchShape, "size">, scale = 1) => (TEXT_SIZE[s.size ?? "m"] ?? 16) * scale;
 
 export interface SketchShape {
   id?: string;
@@ -19,8 +28,12 @@ export interface SketchShape {
   fill?: SketchFill;
   /** The words, for a "text" shape. */
   text?: string;
-  /** Marker color; default ink. */
+  /** Marker color; default ink. "none" leaves the outline off. */
   color?: SketchColor;
+  /** Line weight: thin, normal (default), thick. */
+  weight?: string;
+  /** Text size for a "text" shape: s, m (default), l, xl. */
+  size?: string;
 }
 
 /** A sharpie stroke from play mode. */
@@ -32,7 +45,7 @@ export interface MarkupStroke {
 /** Placement tweaks: move, then scale and rotate around the shape's center. */
 export interface ShapeOverride { dx?: number; dy?: number; scale?: number; rotate?: number }
 
-const SHAPE_FILL: Record<string, string> = { none: "none", light: C.g2, mid: C.g4, dark: C.g7 };
+const SHAPE_FILL: Record<string, string> = { none: "none", light: C.g2, mid: C.g4, dark: C.g7, white: "#ffffff" };
 
 /** Bounding box of a shape's points, for centering scale and rotate. */
 export function shapeBox(s: Pick<SketchShape, "points">): { x: number; y: number; w: number; h: number } {
@@ -59,27 +72,28 @@ export function ShapeMark({ s, scale = 1 }: { s: SketchShape; scale?: number }) 
     // hand-lettered, centered on its point; a clear box behind makes it easy to grab
     const [x, y] = s.points[0];
     const lines = (s.text ?? "").split("\n");
-    const size = 16 * scale, lh = size * 1.2;
+    const size = shapeTextSize(s, scale), lh = size * 1.2;
     const w = Math.max(24 * scale, ...lines.map((l) => plainText(l).length * size * 0.45)), h = lines.length * lh;
     const top = y - h / 2 + size * 0.85;
     return (
       <g>
         <rect x={x - w / 2 - 4} y={y - h / 2 - 3} width={w + 8} height={h + 6} fill="transparent" />
-        <text textAnchor="middle" fontFamily={FONT.hand} fontSize={size} fill={s.color && s.color !== "yellow" ? MARKER[s.color] : C.ink} stroke={s.color === "yellow" ? MARKER.yellow : C.paper} strokeWidth={3.5 * scale} strokeLinejoin="round" paintOrder="stroke">
+        <text textAnchor="middle" fontFamily={FONT.hand} fontSize={size} fill={s.color && s.color !== "yellow" && MARKER[s.color] ? MARKER[s.color] : C.ink} stroke={s.color === "yellow" ? MARKER.yellow : C.paper} strokeWidth={3.5 * scale} strokeLinejoin="round" paintOrder="stroke">
           {lines.map((l, i) => <tspan key={i} x={x} y={top + i * lh}>{l ? richLines(l, [plainText(l)], s.color && s.color !== "yellow" ? MARKER[s.color] : C.ink, size)[0] : " "}</tspan>)}
         </text>
       </g>
     );
   }
   const [a, b] = s.points;
-  const ink = MARKER[s.color ?? "ink"] ?? C.ink;
-  const colored = !!s.color && s.color !== "ink" && s.color !== "grey";
+  const noLine = s.color === "none";
+  const ink = noLine ? "none" : MARKER[s.color ?? "ink"] ?? C.ink;
+  const colored = !!s.color && s.color !== "ink" && s.color !== "grey" && !noLine && s.fill !== "white";
   // gray fills stay gray; a colored shape gets a see-through tint of its own color instead
   const fill = colored && s.fill && s.fill !== "none" ? ink : SHAPE_FILL[s.fill ?? "none"] ?? "none";
   const fillOpacity = colored ? ({ light: 0.18, mid: 0.35, dark: 0.6 } as Record<string, number>)[s.fill ?? "none"] : undefined;
   // closed shapes stay clickable inside even when unfilled
   const area = fill === "none" ? "transparent" : fill;
-  const stroke = { stroke: ink, strokeWidth: (s.color === "yellow" ? 5 : 2.4) * scale, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, strokeOpacity: s.color === "yellow" ? 0.75 : undefined, fillOpacity };
+  const stroke = { stroke: ink, strokeWidth: (s.color === "yellow" ? Math.max(5, WEIGHT[s.weight ?? "normal"] ?? 2.4) : WEIGHT[s.weight ?? "normal"] ?? 2.4) * scale, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, strokeOpacity: s.color === "yellow" ? 0.75 : undefined, fillOpacity };
   const hit = (d: string) => <path d={d} fill="none" stroke="transparent" strokeWidth={14 * scale} />;
   if (s.type === "rect" || s.type === "ellipse") {
     const r = shapeBox({ points: [a, b] });

@@ -3,7 +3,7 @@ import type { DrawTool } from "../../vendor/sketch/tools";
 import { useWheelView, type View } from "../../vendor/sketch/view";
 import { shapeBounds, type Box, type BoardLayout } from "../layout";
 import { BoardArt } from "../render/board";
-import type { Cards, FlowchartFile } from "../types";
+import type { Cards, FlowchartFile, Side4 } from "../types";
 import type { Key } from "./model";
 
 export type { View };
@@ -27,9 +27,9 @@ interface Props {
   onResize: (key: Key, from: Box, to: Box, commit: boolean) => void;
   onDraw: (kind: DrawTool, points: [number, number][], commit: boolean) => void;
   onTextTool: (x: number, y: number) => void;
-  /** Dragged from a node's dot: to another node, or (to = null) to empty canvas at (x, y). */
-  onConnect: (from: string, to: string | null, x: number, y: number) => void;
-  onDouble: (key: Key | null, x: number, y: number) => void;
+  /** Dragged from a node's dot: to another node (onto one of its dots to pick the sides), or (to = null) to empty canvas at (x, y). */
+  onConnect: (from: string, to: string | null, x: number, y: number, sides?: { from: Side4; to: Side4 }) => void;
+  onDouble: (key: Key, x: number, y: number) => void;
   onDrop: (payload: string, x: number, y: number) => void;
   onDropFile: (file: File, x: number, y: number) => void;
   onPointer: (x: number, y: number) => void;
@@ -58,9 +58,19 @@ export function boxOf(doc: FlowchartFile, L: BoardLayout, key: Key): Box | undef
   return undefined;
 }
 
+/** Where a node's four connector dots sit. */
+export function dotSpots(b: Box, off: number): { side: Side4; x: number; y: number }[] {
+  return [
+    { side: "left", x: b.x - off, y: b.y + b.h / 2 },
+    { side: "right", x: b.x + b.w + off, y: b.y + b.h / 2 },
+    { side: "top", x: b.x + b.w / 2, y: b.y - off },
+    { side: "bottom", x: b.x + b.w / 2, y: b.y + b.h + off },
+  ];
+}
+
 /** The topmost node under a point: stamps first, then cards and steps, then stickies and the rest. */
-export function nodeAt(L: BoardLayout, x: number, y: number, skip?: string): string | undefined {
-  const all = Object.values(L.nodes).filter((n) => n.id !== skip && inside(n, x, y));
+export function nodeAt(L: BoardLayout, x: number, y: number, skip?: string, pad = 0): string | undefined {
+  const all = Object.values(L.nodes).filter((n) => n.id !== skip && inside(n, x, y, pad));
   return (all.find((n) => n.type === "stamp") ?? all[all.length - 1])?.id;
 }
 
@@ -69,8 +79,8 @@ export function Canvas(p: Props) {
   const [hover, setHover] = useState<string | null>(null);
   const [space, setSpace] = useState(false);
   const [marquee, setMarquee] = useState<Box | null>(null);
-  const [wire, setWire] = useState<{ from: string; x: number; y: number } | null>(null);
-  const drag = useRef<{ kind: "pan" | "move" | "resize" | "draw" | "marquee" | "connect"; sx: number; sy: number; vx: number; vy: number; wx: number; wy: number; moved: boolean; key?: Key; handle?: Handle; from?: Box; points?: [number, number][]; node?: string; click?: Key } | null>(null);
+  const [wire, setWire] = useState<{ from: string; side: Side4; x: number; y: number; to?: string; toSide?: Side4 } | null>(null);
+  const drag = useRef<{ kind: "pan" | "move" | "resize" | "draw" | "marquee" | "connect"; sx: number; sy: number; vx: number; vy: number; wx: number; wy: number; moved: boolean; key?: Key; handle?: Handle; from?: Box; points?: [number, number][]; node?: string; side?: Side4; click?: Key } | null>(null);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => { if (e.code === "Space" && !(e.target as HTMLElement).closest("input,textarea,select")) { setSpace(true); e.preventDefault(); } };
@@ -117,7 +127,7 @@ export function Canvas(p: Props) {
       if (from) return begin(e, { ...base, kind: "resize", key: p.sel[0], handle, from });
     }
     const dot = (target as HTMLElement).dataset?.dot;
-    if (dot) { setWire({ from: dot, x: w.x, y: w.y }); return begin(e, { ...base, kind: "connect", node: dot }); }
+    if (dot) { const side = ((target as HTMLElement).dataset.side ?? "right") as Side4; setWire({ from: dot, side, x: w.x, y: w.y }); return begin(e, { ...base, kind: "connect", node: dot, side }); }
     const link = target.closest("[data-url]") as SVGElement | null;
     if (link && p.tool === "select") { e.preventDefault(); return; }
     if (space) return begin(e, { ...base, kind: "pan" });
@@ -167,7 +177,17 @@ export function Canvas(p: Props) {
     else if (d.kind === "move") p.onMoveSel(Math.round(dx / k), Math.round(dy / k), false);
     else if (d.kind === "resize") p.onResize(d.key!, d.from!, resized(d, dx / k, dy / k), false);
     else if (d.kind === "marquee") setMarquee({ x: Math.min(d.wx, w.x), y: Math.min(d.wy, w.y), w: Math.abs(w.x - d.wx), h: Math.abs(w.y - d.wy) });
-    else if (d.kind === "connect") setWire({ from: d.node!, x: w.x, y: w.y });
+    else if (d.kind === "connect") {
+      // over a box: show its dots; right on a dot: snap to that side
+      const to = nodeAt(p.L, w.x, w.y, d.node, 18 / p.view.k);
+      const tb = to ? p.L.nodes[to] : undefined;
+      let toSide: Side4 | undefined;
+      if (tb && tb.type !== "stamp") {
+        const near = dotSpots(tb, 16 / p.view.k).map((s) => ({ ...s, dist: Math.hypot(s.x - w.x, s.y - w.y) })).sort((a, b) => a.dist - b.dist)[0];
+        if (near && near.dist < 18 / p.view.k) toSide = near.side;
+      }
+      setWire({ from: d.node!, side: d.side ?? "right", x: w.x, y: w.y, to: tb && tb.type !== "stamp" ? to : undefined, toSide });
+    }
     else if (d.kind === "draw") {
       const q: [number, number] = [Math.round(w.x), Math.round(w.y)];
       if (p.tool === "pen") { const last = d.points![d.points!.length - 1]; if (Math.hypot(q[0] - last[0], q[1] - last[1]) > 2) d.points!.push(q); }
@@ -182,10 +202,12 @@ export function Canvas(p: Props) {
     if (!d) return;
     const w = world(e);
     if (d.kind === "connect") {
+      const wv = wire;
       setWire(null);
       p.setDragging(false);
       if (!d.moved) return;
-      p.onConnect(d.node!, nodeAt(p.L, w.x, w.y, d.node) ?? null, w.x, w.y);
+      const to = wv?.to ?? null;
+      p.onConnect(d.node!, to, w.x, w.y, to && wv?.toSide ? { from: d.side ?? "right", to: wv.toSide } : undefined);
       return;
     }
     if (!d.moved) {
@@ -228,7 +250,14 @@ export function Canvas(p: Props) {
 
   return (
     <div ref={ref} className={`canvas${space ? " panning" : ""}${p.tool !== "select" ? " drawing" : ""}`} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={() => setHover(null)} onClick={onClick}
-      onDoubleClick={(e) => { if (p.tool !== "select") return; const w = world(e); p.onDouble(keyAt(e.target as Element, w.x, w.y), w.x, w.y); }}
+      onDoubleClick={(e) => {
+        if (p.tool !== "select") return;
+        const w = world(e);
+        // the first click captured the pointer, so ask the page what's really under it
+        const under = document.elementFromPoint(e.clientX, e.clientY) ?? (e.target as Element);
+        const k = keyAt(under, w.x, w.y) ?? (() => { const n = nodeAt(p.L, w.x, w.y); return n ? `node:${n}` : null; })();
+        if (k) p.onDouble(k, w.x, w.y);
+      }}
       onDragOver={(e) => { if (e.dataTransfer.types.includes("application/x-flowchart") || e.dataTransfer.types.includes("Files")) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } }}
       onDrop={(e) => {
         e.preventDefault();
@@ -242,7 +271,14 @@ export function Canvas(p: Props) {
       <div className="world" style={{ transform: `translate(${p.view.x}px, ${p.view.y}px) scale(${k})` }}>
         <svg className="board" width={1} height={1} overflow="visible">
           <BoardArt doc={p.doc} L={p.L} o={{ cards: p.cards, cardHref: p.cardHref, wobble: !p.dragging, uid: "ed", highlightEdge: selEdge ? Number(selEdge.slice(5)) : undefined, hide: ed?.key.startsWith("node:") && p.L.nodes[ed.key.slice(5)]?.type !== "card" ? new Set([ed.key.slice(5)]) : undefined }} />
-          {wire ? (() => { const a = p.L.nodes[wire.from]; return a ? <path d={`M${a.x + a.w / 2} ${a.y + a.h / 2} L${wire.x} ${wire.y}`} stroke="#e8590c" strokeWidth={2.6 / k} strokeDasharray={`${6 / k} ${5 / k}`} fill="none" /> : null; })() : null}
+          {wire ? (() => {
+            const a = p.L.nodes[wire.from];
+            if (!a) return null;
+            const s = dotSpots(a, 0).find((d) => d.side === wire.side)!;
+            const tb = wire.to ? p.L.nodes[wire.to] : undefined;
+            const t = tb && wire.toSide ? dotSpots(tb, 0).find((d) => d.side === wire.toSide)! : tb ? { x: tb.x + tb.w / 2, y: tb.y + tb.h / 2 } : { x: wire.x, y: wire.y };
+            return <path d={`M${s.x} ${s.y} L${t.x} ${t.y}`} stroke="#e8590c" strokeWidth={2.6 / k} strokeDasharray={`${6 / k} ${5 / k}`} fill="none" />;
+          })() : null}
         </svg>
         {hovBox && p.tool === "select" ? <div className="hover-box" style={{ left: hovBox.x, top: hovBox.y, width: hovBox.w, height: hovBox.h, borderWidth: bw }} /> : null}
         {p.sel.filter((s) => !s.startsWith("edge:")).map((s) => {
@@ -254,11 +290,19 @@ export function Canvas(p: Props) {
             </div>
           );
         })}
-        {dotNode && !ed ? (["left", "right", "top", "bottom"] as const).map((side) => {
-          const r = 6 / k, off = 16 / k;
-          const [x, y] = side === "left" ? [dotNode.x - off, dotNode.y + dotNode.h / 2] : side === "right" ? [dotNode.x + dotNode.w + off, dotNode.y + dotNode.h / 2] : side === "top" ? [dotNode.x + dotNode.w / 2, dotNode.y - off] : [dotNode.x + dotNode.w / 2, dotNode.y + dotNode.h + off];
-          return <span key={side} className="dot-handle" data-dot={dotNode.id} title="Drag to connect (or to empty space for a new step)" style={{ left: x - r, top: y - r, width: r * 2, height: r * 2, borderWidth: 2 / k }} />;
+        {dotNode && !ed && !wire ? dotSpots(dotNode, 16 / k).map(({ side, x, y }) => {
+          const r = 6 / k;
+          return <span key={side} className="dot-handle" data-dot={dotNode.id} data-side={side} title="Drag onto another box to connect (or into empty space for a new step)" style={{ left: x - r, top: y - r, width: r * 2, height: r * 2, borderWidth: 2 / k }} />;
         }) : null}
+        {wire?.to && p.L.nodes[wire.to] ? (() => {
+          const tb = p.L.nodes[wire.to];
+          return (
+            <>
+              <div className="target-box" style={{ left: tb.x - 4 / k, top: tb.y - 4 / k, width: tb.w + 8 / k, height: tb.h + 8 / k, borderWidth: 2.5 / k }} />
+              {dotSpots(tb, 16 / k).map(({ side, x, y }) => { const r = (wire.toSide === side ? 8 : 6) / k; return <span key={side} className={`dot-handle target${wire.toSide === side ? " on" : ""}`} style={{ left: x - r, top: y - r, width: r * 2, height: r * 2, borderWidth: 2 / k }} />; })}
+            </>
+          );
+        })() : null}
         {marquee ? <div className="marquee" style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h, borderWidth: bw }} /> : null}
         {ed ? (
           <textarea className={`inline-edit${ed.align === "center" ? " center" : ""}`} autoFocus defaultValue={ed.value}

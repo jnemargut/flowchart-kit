@@ -3,12 +3,12 @@ import { createServer } from "node:http";
 import { existsSync, mkdirSync, readFileSync, statSync, watch, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { bakeImage } from "../../vendor/sketch/bake";
+import { bakeImage, croppedImage } from "../../vendor/sketch/bake";
 import { formatJSON } from "../../vendor/sketch/json";
 import { readMeta } from "../../vendor/sketch/pngmeta";
 import { eventHub, listenFree, openBrowser, readBody, sendJSON, serveStatic } from "../../vendor/sketch/server";
 import { kitScript, nearby, parseRef, resolveCards } from "../cards";
-import { boardPNG, boardSVGFile, cacheDirFor, stemOf, toJSONCanvas, toPDF, toPPTX } from "../export";
+import { boardPNG, boardSVGFile, cacheDirFor, regionPNG, stemOf, toJSONCanvas, toPDF, toPPTX } from "../export";
 import type { Cards, FlowchartFile } from "../types";
 import { validate } from "../validate";
 
@@ -89,9 +89,14 @@ export async function dev(file: string, o: DevOptions) {
         const id = decodeURIComponent(url.pathname.slice(6));
         const c = cards[id];
         if (!c?.png || !existsSync(c.png)) { res.writeHead(404); return res.end(); }
-        const raw = c.kind !== "image" || read().nodes[id]?.sketch === false;
-        res.writeHead(200, { "content-type": raw && /\.jpe?g$/i.test(c.png) ? "image/jpeg" : raw && /\.webp$/i.test(c.png) ? "image/webp" : "image/png", "cache-control": "no-cache" });
-        return res.end(raw ? readFileSync(c.png) : bakeImage(c.png, cacheDirFor(abs), 1, "grey"));
+        const node = read().nodes[id];
+        // ?full=1: the whole original, for the crop dialog
+        const full = url.searchParams.get("full") === "1";
+        const raw = full || c.kind !== "image" || node?.sketch === false;
+        const crop = full ? undefined : node?.crop;
+        const pic = raw ? croppedImage(c.png, cacheDirFor(abs), crop) : { buf: bakeImage(c.png, cacheDirFor(abs), 1, "grey", crop), mime: "image/png" };
+        res.writeHead(200, { "content-type": pic.mime, "cache-control": "no-cache" });
+        return res.end(pic.buf);
       }
       if (url.pathname === "/api/open-card" && req.method === "POST") {
         const ref = url.searchParams.get("ref") ?? "";
@@ -125,6 +130,13 @@ export async function dev(file: string, o: DevOptions) {
         while (existsSync(join(dir, name))) name = `${basename(raw, extname(raw))}-${i++}${extname(raw) || ext}`;
         writeFileSync(join(dir, name), buf);
         return sendJSON(res, 200, { path: "./" + relative(base, join(dir, name)).split(sep).join("/") });
+      }
+      if (url.pathname === "/api/region.png") {
+        const q = (k: string) => Number(url.searchParams.get(k));
+        const box = { x: q("x"), y: q("y"), w: Math.max(1, q("w")), h: Math.max(1, q("h")) };
+        if (![box.x, box.y, box.w, box.h].every(Number.isFinite)) { res.writeHead(400); return res.end(); }
+        res.writeHead(200, { "content-type": "image/png", "cache-control": "no-cache" });
+        return res.end(regionPNG(read(), abs, box, Math.min(3, Math.max(1, Number(url.searchParams.get("scale") ?? 2)))));
       }
       if (url.pathname === "/api/export") {
         const d = read();

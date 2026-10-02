@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { plainText } from "../vendor/sketch/rich";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { PDFDocument } from "pdf-lib";
-import { bakeImage } from "../vendor/sketch/bake";
+import { bakeImage, croppedImage } from "../vendor/sketch/bake";
 import { drawingFonts, fontFaceCss } from "../vendor/sketch/fonts";
 import { initRenderer, renderPNG } from "../vendor/sketch/resvg";
 import { resolveCards } from "./cards";
@@ -23,13 +23,13 @@ export function cardHrefs(file: string, doc?: FlowchartFile) {
   return (id: string, info: CardInfo) => {
     if (!info.png) return undefined;
     const raw = info.kind !== "image" || doc?.nodes[id]?.sketch === false;
-    const k = `${info.png}:${raw}`;
+    const crop = doc?.nodes[id]?.crop;
+    const k = `${info.png}:${raw}:${crop?.join(",") ?? ""}`;
     if (memo.has(k)) return memo.get(k);
     let uri: string | undefined;
     try {
-      const buf = raw ? readFileSync(info.png) : bakeImage(info.png, cacheDirFor(file), 1, "grey");
-      const mime = raw && /\.jpe?g$/i.test(info.png) ? "image/jpeg" : raw && /\.webp$/i.test(info.png) ? "image/webp" : "image/png";
-      uri = `data:${mime};base64,${buf.toString("base64")}`;
+      const pic = raw ? croppedImage(info.png, cacheDirFor(file), crop) : { buf: bakeImage(info.png, cacheDirFor(file), 1, "grey", crop), mime: "image/png" };
+      uri = `data:${pic.mime};base64,${pic.buf.toString("base64")}`;
     } catch { uri = undefined; }
     memo.set(k, uri);
     return uri;
@@ -49,6 +49,12 @@ export function boardPNG(doc: FlowchartFile, file: string, o: { scale?: number; 
   const p = o.prep ?? prepare(doc, file);
   const out = png(boardSVG(doc, { ...p, frame: o.frame }), o.scale ?? 1.5);
   return embedSource(out, { file: basename(file), frame: o.frame, source: doc });
+}
+
+/** Just a region of the board (what's selected in the editor), for copying as a picture. */
+export function regionPNG(doc: FlowchartFile, file: string, box: { x: number; y: number; w: number; h: number }, scale = 2): Buffer {
+  const p = prepare(doc, file);
+  return png(boardSVG(doc, { ...p, box }), scale);
 }
 
 export const boardSVGFile = (doc: FlowchartFile, file: string, frame?: string) => boardSVG(doc, { ...prepare(doc, file), frame, fontCss: fontFaceCss() });

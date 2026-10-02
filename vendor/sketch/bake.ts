@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
+import { fullCrop, isCrop, type Crop } from "./crop";
 import { renderPNG } from "./resvg";
+
+export { isCrop, splitCrop, withCrop, type Crop } from "./crop";
 
 export const MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif" };
 
@@ -58,17 +61,45 @@ ${mode !== "grey" ? `<rect width="100%" height="100%" fill="#fbfaf7"/>` : ""}
 
 const MAX_BAKE_W = 720;
 
-/** Bake (or fetch from cache) the sketchified version of an image file. Returns PNG bytes. Call initRenderer() first. */
-export function bakeImage(absPath: string, cacheDir: string, roughness = 1, mode: BakeMode = "teal"): Buffer {
+
+
+/** Cut a crop out of a picture's bytes. Returns PNG bytes (or the original when there's nothing to cut). */
+export function cropBytes(buf: Buffer, mime: string, crop?: Crop): { buf: Buffer; mime: string } {
+  if (fullCrop(crop) || !isCrop(crop)) return { buf, mime };
+  const size = imageSize(buf);
+  if (!size) return { buf, mime };
+  const x = crop[0] * size.w, y = crop[1] * size.h, w = Math.max(1, Math.round((crop[2] - crop[0]) * size.w)), h = Math.max(1, Math.round((crop[3] - crop[1]) * size.h));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><image href="data:${mime};base64,${buf.toString("base64")}" x="${-x}" y="${-y}" width="${size.w}" height="${size.h}"/></svg>`;
+  return { buf: renderPNG(svg), mime: "image/png" };
+}
+
+/** An image file, cropped (cached next to the other baked pictures). */
+export function croppedImage(absPath: string, cacheDir: string, crop?: Crop): { buf: Buffer; mime: string } {
+  const mime = MIME[extname(absPath).toLowerCase()] ?? "image/png";
+  if (fullCrop(crop) || !isCrop(crop)) return { buf: readFileSync(absPath), mime };
   const st = statSync(absPath);
-  const key = createHash("sha1").update(`${absPath}:${st.mtimeMs}:${st.size}:${roughness}:${mode === "teal" ? "v1" : `${mode}-v2`}`).digest("hex").slice(0, 12);
+  const key = createHash("sha1").update(`${absPath}:${st.mtimeMs}:${st.size}:crop:${crop.join(",")}`).digest("hex").slice(0, 12);
+  const out = join(cacheDir, `${basename(absPath, extname(absPath))}-crop-${key}.png`);
+  if (existsSync(out)) return { buf: readFileSync(out), mime: "image/png" };
+  const r = cropBytes(readFileSync(absPath), mime, crop);
+  mkdirSync(cacheDir, { recursive: true });
+  writeFileSync(out, r.buf);
+  return r;
+}
+
+/** Bake (or fetch from cache) the sketchified version of an image file, optionally cropped. Returns PNG bytes. Call initRenderer() first. */
+export function bakeImage(absPath: string, cacheDir: string, roughness = 1, mode: BakeMode = "teal", crop?: Crop): Buffer {
+  const st = statSync(absPath);
+  const cropKey = fullCrop(crop) || !isCrop(crop) ? "" : `:crop:${crop.join(",")}`;
+  const key = createHash("sha1").update(`${absPath}:${st.mtimeMs}:${st.size}:${roughness}:${mode === "teal" ? "v1" : `${mode}-v2`}${cropKey}`).digest("hex").slice(0, 12);
   const out = join(cacheDir, `${basename(absPath, extname(absPath))}-${key}.png`);
   if (existsSync(out)) return readFileSync(out);
-  const buf = readFileSync(absPath);
+  const src = croppedImage(absPath, cacheDir, crop);
+  const buf = src.buf;
   const size = imageSize(buf) ?? { w: 390, h: 844 };
   const scale = Math.min(1, MAX_BAKE_W / size.w);
   const w = Math.round(size.w * scale), h = Math.round(size.h * scale);
-  const mime = MIME[extname(absPath).toLowerCase()] ?? "image/png";
+  const mime = src.mime;
   const png = renderPNG(duotoneSVG(`data:${mime};base64,${buf.toString("base64")}`, w, h, roughness, mode));
   mkdirSync(cacheDir, { recursive: true });
   writeFileSync(out, png);

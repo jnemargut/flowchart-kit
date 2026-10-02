@@ -1,12 +1,12 @@
 /**
- * Simple rich text for every kit: **bold**, *italic* (or _italic_) and ~~strikethrough~~, written right in the
+ * Simple rich text for every kit: **bold**, *italic* (or _italic_), __underline__ and ~~strikethrough~~, written right in the
  * text the way people already type it. The marker fonts have no bold or italic faces, so bold is the same ink
  * drawn a touch heavier and italic leans each letter, like handwriting. Both work the same in the browser and
  * in resvg. Kits wrap the plain words with their own measuring, then hand the lines back here for styling.
  */
 import type { ReactNode } from "react";
 
-export interface Run { text: string; b?: boolean; i?: boolean; s?: boolean }
+export interface Run { text: string; b?: boolean; i?: boolean; s?: boolean; u?: boolean }
 
 const isWord = (c: string | undefined) => !!c && /[\p{L}\p{N}]/u.test(c);
 const isSpace = (c: string | undefined) => c === undefined || /\s/.test(c);
@@ -14,7 +14,7 @@ const isSpace = (c: string | undefined) => c === undefined || /\s/.test(c);
 /** Split marked-up text into styled runs. Unclosed markers stay as plain characters. */
 export function parseRich(src: string): Run[] {
   const s = String(src ?? "");
-  type Tok = { k: "text"; v: string } | { k: "mark"; m: "b" | "i" | "s"; raw: string; open: boolean; close: boolean };
+  type Tok = { k: "text"; v: string } | { k: "mark"; m: "b" | "i" | "s" | "u"; raw: string; open: boolean; close: boolean };
   const toks: Tok[] = [];
   let buf = "";
   const flush = () => { if (buf) { toks.push({ k: "text", v: buf }); buf = ""; } };
@@ -22,12 +22,13 @@ export function parseRich(src: string): Run[] {
     const c = s[i], prev = s[i - 1];
     if (c === "\\" && /[*_~\\]/.test(s[i + 1] ?? "")) { buf += s[++i]; continue; }
     const two = s.slice(i, i + 2);
-    const mark = two === "**" ? { m: "b" as const, raw: "**" } : two === "~~" ? { m: "s" as const, raw: "~~" } : c === "*" ? { m: "i" as const, raw: "*" } : c === "_" ? { m: "i" as const, raw: "_" } : undefined;
+    const mark = two === "**" ? { m: "b" as const, raw: "**" } : two === "~~" ? { m: "s" as const, raw: "~~" } : two === "__" ? { m: "u" as const, raw: "__" } : c === "*" ? { m: "i" as const, raw: "*" } : c === "_" ? { m: "i" as const, raw: "_" } : undefined;
     if (!mark) { buf += c; continue; }
     const after = s[i + mark.raw.length];
     // `_` inside a word (snake_case) is just an underscore
-    const open = !isSpace(after) && (mark.raw !== "_" || !isWord(prev));
-    const close = !isSpace(prev) && (mark.raw !== "_" || !isWord(after));
+    // `_` and `__` inside a word (snake_case, __init__-ish names mid-word) are just underscores
+    const open = !isSpace(after) && (!mark.raw.startsWith("_") || !isWord(prev));
+    const close = !isSpace(prev) && (!mark.raw.startsWith("_") || !isWord(after));
     if (!open && !close) { buf += mark.raw; i += mark.raw.length - 1; continue; }
     flush();
     toks.push({ k: "mark", m: mark.m, raw: mark.raw, open, close });
@@ -46,12 +47,12 @@ export function parseRich(src: string): Run[] {
     } else if (t.open) stack.push(idx);
   });
   const out: Run[] = [];
-  const style = { b: 0, i: 0, s: 0 };
+  const style = { b: 0, i: 0, s: 0, u: 0 };
   const push = (text: string) => {
     if (!text) return;
-    const r: Run = { text, ...(style.b ? { b: true } : {}), ...(style.i ? { i: true } : {}), ...(style.s ? { s: true } : {}) };
+    const r: Run = { text, ...(style.b ? { b: true } : {}), ...(style.i ? { i: true } : {}), ...(style.s ? { s: true } : {}), ...(style.u ? { u: true } : {}) };
     const last = out[out.length - 1];
-    if (last && !!last.b === !!r.b && !!last.i === !!r.i && !!last.s === !!r.s) last.text += text; else out.push(r);
+    if (last && same(last, r)) last.text += text; else out.push(r);
   };
   toks.forEach((t, idx) => {
     if (t.k === "text") { push(t.v); return; }
@@ -62,9 +63,12 @@ export function parseRich(src: string): Run[] {
   return out;
 }
 
+const same = (a: Run, b: Run) => !!a.b === !!b.b && !!a.i === !!b.i && !!a.s === !!b.s && !!a.u === !!b.u;
+const styled = (r: Run) => !!(r.b || r.i || r.s || r.u);
+
 /** The words without any markers: what kits measure and wrap. */
 export const plainText = (src: string) => parseRich(src).map((r) => r.text).join("");
-export const isRich = (src: string) => parseRich(src).some((r) => r.b || r.i || r.s);
+export const isRich = (src: string) => parseRich(src).some(styled);
 
 /**
  * Put the styles back on lines a kit has already wrapped from `plainText(src)`. Wrappers drop spaces at line
@@ -80,9 +84,8 @@ export function styleLines(src: string, lines: string[]): Run[][] {
       while (at < chars.length && chars[at].c !== ch && /\s/.test(chars[at].c)) at++;
       const src = at < chars.length && chars[at].c === ch ? chars[at++].r : undefined;
       const last = out[out.length - 1];
-      const style = { b: src?.b, i: src?.i, s: src?.s };
-      if (last && !!last.b === !!style.b && !!last.i === !!style.i && !!last.s === !!style.s) last.text += ch;
-      else out.push({ text: ch, ...(style.b ? { b: true } : {}), ...(style.i ? { i: true } : {}), ...(style.s ? { s: true } : {}) });
+      const run: Run = { text: ch, ...(src?.b ? { b: true } : {}), ...(src?.i ? { i: true } : {}), ...(src?.s ? { s: true } : {}), ...(src?.u ? { u: true } : {}) };
+      if (last && same(last, run)) last.text += ch; else out.push(run);
     }
     return out;
   });
@@ -94,14 +97,14 @@ export function RichRuns({ runs, ink, size }: { runs: Run[]; ink: string; size: 
     <tspan key={k}
       {...(r.b ? { stroke: ink, strokeWidth: Math.max(0.5, size * 0.045), strokeLinejoin: "round" as const, paintOrder: "fill" } : {})}
       {...(r.i ? { rotate: [...r.text].map(() => 13).join(" ") } : {})}
-      {...(r.s ? { textDecoration: "line-through" } : {})}>{r.text}</tspan>
+      {...(r.s || r.u ? { textDecoration: [r.u ? "underline" : "", r.s ? "line-through" : ""].filter(Boolean).join(" ") } : {})}>{r.text}</tspan>
   ));
 }
 
 /** A line of text that may carry styles: plain text when it doesn't (the common case stays tiny). */
 export function RichLine({ src, line, ink, size }: { src?: string; line: Run[] | string; ink: string; size: number }): ReactNode {
   if (typeof line === "string") return src && isRich(src) ? <RichRuns runs={styleLines(src, [line])[0]} ink={ink} size={size} /> : line;
-  return line.some((r) => r.b || r.i || r.s) ? <RichRuns runs={line} ink={ink} size={size} /> : line.map((r) => r.text).join("");
+  return line.some(styled) ? <RichRuns runs={line} ink={ink} size={size} /> : line.map((r) => r.text).join("");
 }
 
 /** The same styles in HTML (editor chrome: titles, lists, Play's header). */
@@ -109,6 +112,7 @@ export function RichHTML({ src }: { src: string }): ReactNode {
   return parseRich(src).map((r, k) => {
     let n: ReactNode = r.text;
     if (r.s) n = <s>{n}</s>;
+    if (r.u) n = <u>{n}</u>;
     if (r.i) n = <em>{n}</em>;
     if (r.b) n = <strong>{n}</strong>;
     return <span key={k}>{n}</span>;
@@ -121,8 +125,8 @@ export function richLines(src: string, lines: string[], ink: string, size: numbe
   return styleLines(src, lines).map((runs, i) => <RichRuns key={i} runs={runs} ink={ink} size={size} />);
 }
 
-/** Wrap the selection in a text field with a marker (or take it off again). For Cmd+B / Cmd+I / Cmd+Shift+X. */
-export function toggleMark(value: string, start: number, end: number, mark: "**" | "*" | "~~"): { value: string; start: number; end: number } {
+/** Wrap the selection in a text field with a marker (or take it off again). For Cmd+B / Cmd+I / Cmd+U / Cmd+Shift+X. */
+export function toggleMark(value: string, start: number, end: number, mark: "**" | "*" | "~~" | "__"): { value: string; start: number; end: number } {
   const before = value.slice(0, start), sel = value.slice(start, end), after = value.slice(end);
   if (before.endsWith(mark) && after.startsWith(mark) && !(mark === "*" && before.endsWith("**") && !before.endsWith("***")))
     return { value: before.slice(0, -mark.length) + sel + after.slice(mark.length), start: start - mark.length, end: end - mark.length };
@@ -135,7 +139,7 @@ export function toggleMark(value: string, start: number, end: number, mark: "**"
 }
 
 /**
- * Cmd/Ctrl+B, Cmd/Ctrl+I and Cmd/Ctrl+Shift+X in every text box on the page. Call once when an editor starts.
+ * Cmd/Ctrl+B, Cmd/Ctrl+I, Cmd/Ctrl+U and Cmd/Ctrl+Shift+X in every text box on the page. Call once when an editor starts.
  * Works with React's controlled inputs too (it sets the value the way React listens for).
  */
 export function installRichKeys(doc: Document = document) {
@@ -143,7 +147,7 @@ export function installRichKeys(doc: Document = document) {
     const el = e.target as HTMLInputElement | HTMLTextAreaElement;
     if (!(e.metaKey || e.ctrlKey) || e.altKey || !el || !("selectionStart" in el) || (el.tagName !== "TEXTAREA" && el.type !== "text")) return;
     const k = e.key.toLowerCase();
-    const mark = k === "b" && !e.shiftKey ? "**" : k === "i" && !e.shiftKey ? "*" : k === "x" && e.shiftKey ? "~~" : undefined;
+    const mark = k === "b" && !e.shiftKey ? "**" : k === "i" && !e.shiftKey ? "*" : k === "u" && !e.shiftKey ? "__" : k === "x" && e.shiftKey ? "~~" : undefined;
     if (!mark || el.selectionStart === null || el.selectionEnd === null) return;
     e.preventDefault();
     e.stopPropagation();

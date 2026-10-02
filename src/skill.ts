@@ -70,8 +70,12 @@ path. **Below, \`${CLI}\` is short for that whole command.**
 - **Show, don't describe.** If a storyboard panel or a wireframe screen exists for a moment, put it on the board
   as a \`card\` and link to it from the step (\`"style": "dashed"\` reads as "see this").
 - **Speaker notes.** A frame's \`notes\` say what to point out when it's on screen.
-- **Emphasis is fine, sparingly.** Any text can use \`**bold**\`, \`*italic*\` and \`~~struck out~~\`
-  (designers get Cmd+B and Cmd+I in the editor). Bold the one word that matters, strike what changed.
+- **Emphasis is fine, sparingly.** Any text can use \`**bold**\`, \`*italic*\`, \`__underline__\` and
+  \`~~struck out~~\` (designers get Cmd+B, Cmd+I and Cmd+U in the editor). Bold the one word that matters,
+  strike what changed.
+- **Looks are optional.** Boxes take \`size\` (s, m, l, xl), \`fill\`, \`stroke\` and \`weight\`; arrows take
+  \`shape\` (curved, angled, straight), \`style\` (solid, dashed, dotted), \`head\` (end, start, both, none),
+  \`color\` and \`weight\`. Use them to mean something (red for where it breaks), not to decorate.
 - 5 to 15 things per frame. Split bigger ones.
 `;
 
@@ -116,17 +120,32 @@ export const FORMAT_MD = `# flowchart.json format
   "present": ["happy", "late", "ideas"],    // slide order (default: as listed)
   "transition": "fade",                     // or "cut"
 
+  "connectors": "curved",                 // or "angled" / "straight", for every link that doesn't say
+
   // written by the editor. Leave these alone:
-  "layout": { "eta": { "dx": 12, "dy": -8 }, "order": { "w": 200 } },   // nudges and sizes
+  "layout": { "order": { "x": 210, "y": 64, "w": 200 }, "eta": { "dx": 12 } },  // pins (x/y), nudges, sizes
   "canvas": { "late": [980, 0] },                                       // where the designer put a frame
   "shapes": [{ "type": "line", "points": [[0, 180], [900, 180]], "color": "grey" }],  // drawings off-frame
   "markup": { "late": [{ "points": [[10, 10], [40, 30]] }] }             // Play-mode sharpie per frame
 }
 \`\`\`
 
+**Looks** (all optional): boxes, pills, decisions and text take \`size\` (\`s\`, \`m\`, \`l\`, \`xl\`), \`fill\`
+(\`white\`, \`paper\`, \`light\`, \`mid\`, \`dark\`, \`yellow\`, \`pink\`, \`blue\`, \`green\`, \`teal\`, \`none\`),
+\`stroke\` (\`ink\`, \`grey\`, \`red\`, \`blue\`, \`green\`, \`orange\`, \`teal\`, \`none\`) and \`weight\` (\`thin\`,
+\`normal\`, \`thick\`). White with no stroke covers things up. Links take \`shape\` (\`curved\`, \`angled\`,
+\`straight\`), \`style\` (\`solid\`, \`dashed\`, \`dotted\`), \`head\` (\`end\`, \`start\`, \`both\`, \`none\`),
+\`color\`, \`weight\`, and \`fromSide\`/\`toSide\` (\`left\`, \`right\`, \`top\`, \`bottom\`) to pin which sides they use.
+Cards can be cropped: \`"crop": [left, top, right, bottom]\` as fractions of the picture.
+
 **Nodes** take \`type\` (default \`box\`), \`text\`, \`frame\`, and per type: \`color\` (stickies), \`near\`
 (stickies, text, stamps and link cards sit beside or on top of that node, in its frame), \`icon\` and \`at\` (stamps),
 \`ref\` (cards), \`url\` (link cards, or a clickable badge on anything else) and \`product\` (teal).
+
+**Staying put.** Once the designer edits a board by hand, the editor pins everything that's on it
+(\`layout.<id>.x\`/\`y\`, and frames in \`canvas\`), so nothing reshuffles when something small changes. New nodes you
+add land next to whatever they're linked to. Don't remove pins unless asked; the designer has a **Tidy up** button
+for that.
 
 **Layout** is automatic. Each frame's linked nodes become a flow, laid out left to right (\`"dir": "down"\` on
 the frame for top to bottom). Unlinked things (a wall of stickies) line up in a tidy grid under the flow.

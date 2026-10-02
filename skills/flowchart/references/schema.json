@@ -96,7 +96,8 @@
                     "none",
                     "light",
                     "mid",
-                    "dark"
+                    "dark",
+                    "white"
                   ]
                 },
                 "text": {
@@ -109,8 +110,28 @@
                     "red",
                     "blue",
                     "green",
-                    "yellow"
+                    "yellow",
+                    "none"
                   ]
+                },
+                "weight": {
+                  "enum": [
+                    "thin",
+                    "normal",
+                    "thick"
+                  ]
+                },
+                "size": {
+                  "enum": [
+                    "s",
+                    "m",
+                    "l",
+                    "xl"
+                  ]
+                },
+                "front": {
+                  "type": "boolean",
+                  "description": "Drawn in front of the boxes and cards."
                 }
               }
             }
@@ -211,9 +232,66 @@
             "type": "boolean",
             "description": "image cards: false shows the picture as it is (default: sketchified in grays to match)"
           },
+          "crop": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "cards: [left, top, right, bottom] as fractions of the picture (the editor's Crop button writes it)"
+          },
           "product": {
             "type": "boolean",
             "description": "true draws it teal: this is where the product shows up"
+          },
+          "size": {
+            "enum": [
+              "s",
+              "m",
+              "l",
+              "xl"
+            ],
+            "description": "text size: s | m (default) | l | xl"
+          },
+          "fill": {
+            "enum": [
+              "white",
+              "paper",
+              "light",
+              "mid",
+              "dark",
+              "yellow",
+              "pink",
+              "blue",
+              "green",
+              "teal",
+              "none"
+            ],
+            "description": "boxes, pills, decisions, text: white | paper | light | mid | dark | yellow | pink | blue | green | teal | none"
+          },
+          "stroke": {
+            "enum": [
+              "ink",
+              "grey",
+              "red",
+              "blue",
+              "green",
+              "orange",
+              "teal",
+              "none"
+            ],
+            "description": "border color: ink | grey | red | blue | green | orange | teal | none"
+          },
+          "weight": {
+            "enum": [
+              "thin",
+              "normal",
+              "thick"
+            ],
+            "description": "border weight: thin | normal (default) | thick"
           }
         }
       }
@@ -243,9 +321,65 @@
           "style": {
             "enum": [
               "solid",
-              "dashed"
+              "dashed",
+              "dotted"
             ],
-            "description": "\"solid\" (default) or \"dashed\" (maybe, later, a weaker link)"
+            "description": "\"solid\" (default), \"dashed\" (maybe, later) or \"dotted\" (a weak or implied link)"
+          },
+          "shape": {
+            "enum": [
+              "curved",
+              "angled",
+              "straight"
+            ],
+            "description": "\"curved\", \"angled\" (right-angle elbows) or \"straight\" (default: the board's \"connectors\", else curved)"
+          },
+          "head": {
+            "enum": [
+              "end",
+              "start",
+              "both",
+              "none"
+            ],
+            "description": "arrowheads: \"end\" (default), \"start\", \"both\" or \"none\" (a plain line)"
+          },
+          "color": {
+            "enum": [
+              "ink",
+              "grey",
+              "red",
+              "blue",
+              "green",
+              "orange",
+              "teal"
+            ],
+            "description": "ink | grey (default) | red | blue | green | orange | teal"
+          },
+          "weight": {
+            "enum": [
+              "thin",
+              "normal",
+              "thick"
+            ],
+            "description": "thin | normal (default) | thick"
+          },
+          "fromSide": {
+            "enum": [
+              "left",
+              "right",
+              "top",
+              "bottom"
+            ],
+            "description": "which side it leaves from: \"left\" | \"right\" | \"top\" | \"bottom\" (default: the layout picks)"
+          },
+          "toSide": {
+            "enum": [
+              "left",
+              "right",
+              "top",
+              "bottom"
+            ],
+            "description": "which side it arrives on (same choices)"
           }
         }
       }
@@ -262,6 +396,14 @@
         "fade",
         "cut"
       ]
+    },
+    "connectors": {
+      "enum": [
+        "curved",
+        "angled",
+        "straight"
+      ],
+      "description": "How links are drawn unless a link says otherwise."
     },
     "shapes": {
       "type": "array",
@@ -301,7 +443,8 @@
               "none",
               "light",
               "mid",
-              "dark"
+              "dark",
+              "white"
             ]
           },
           "text": {
@@ -314,8 +457,28 @@
               "red",
               "blue",
               "green",
-              "yellow"
+              "yellow",
+              "none"
             ]
+          },
+          "weight": {
+            "enum": [
+              "thin",
+              "normal",
+              "thick"
+            ]
+          },
+          "size": {
+            "enum": [
+              "s",
+              "m",
+              "l",
+              "xl"
+            ]
+          },
+          "front": {
+            "type": "boolean",
+            "description": "Drawn in front of the boxes and cards."
           }
         }
       }
@@ -357,9 +520,16 @@
     },
     "layout": {
       "type": "object",
+      "description": "Written by the editor: x/y pin a node in place (frame coordinates); dx/dy nudge an unpinned one; w/h size it.",
       "additionalProperties": {
         "type": "object",
         "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
           "dx": {
             "type": "number"
           },

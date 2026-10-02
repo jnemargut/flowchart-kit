@@ -2,6 +2,7 @@
  * The board in marker style: frames, the designer's drawings, arrows, steps, stickies, cards and stamps.
  * The editor draws this live; the exports render the same thing to files.
  */
+import { StickyPaper } from "../../vendor/sketch/sticky";
 import { plainText, richLines } from "../../vendor/sketch/rich";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -10,7 +11,7 @@ import { C, OFFSET } from "../../vendor/sketch/tokens";
 import { WobbleFilter } from "../../vendor/sketch/wobble";
 import { hostOf, layoutBoard, slides, TITLE_H, type Box, type BoardLayout, type Edge, type NodeBox } from "../layout";
 import type { CardInfo, Cards, FlowchartFile, FNode } from "../types";
-import { STICKY } from "../vocab";
+import { FILLS, LINE_COLORS, STICKY, WEIGHT_PX } from "../vocab";
 import { Stamp } from "./stamps";
 
 export interface ArtOpts {
@@ -63,12 +64,17 @@ export function LinkBadge({ url, x, y, r = 13 }: { url: string; x: number; y: nu
 }
 
 function NodeArt({ b, n, o, wob }: { b: NodeBox; n: FNode; o: ArtOpts; wob?: string }) {
-  const ink = n.product ? C.tealDark : C.ink;
-  const line = { stroke: ink, strokeWidth: 2.4, strokeLinejoin: "round" as const };
-  const face = n.product ? PRODUCT_FILL : "#fff";
+  const ink = n.stroke ? LINE_COLORS[n.stroke] ?? C.ink : n.product ? C.tealDark : C.ink;
+  const line = { stroke: ink, strokeWidth: WEIGHT_PX[n.weight ?? "normal"] ?? 2.4, strokeLinejoin: "round" as const };
+  const chosen = n.fill ? FILLS[n.fill]?.fill : undefined;
+  const face = chosen ?? (n.product ? PRODUCT_FILL : "#fff");
+  // the marker's offset shadow: not for solid white (it's for covering things), see-through, or no-border boxes
+  const shadow = n.fill !== "white" && n.fill !== "none" && n.stroke !== "none";
+  const words = n.fill === "dark" ? C.paper : C.ink;
   const off = `translate(${OFFSET.x} ${OFFSET.y})`;
   if (b.type === "text") {
-    return <g data-node={b.id}><rect x={b.x} y={b.y} width={b.w} height={b.h} fill="transparent" /><Words b={b} src={n.text} color={C.g8} /></g>;
+    const bg = chosen && chosen !== "none" ? <rect x={b.x - 6} y={b.y - 4} width={b.w + 12} height={b.h + 8} rx={4} fill={chosen} stroke={n.stroke && n.stroke !== "none" ? ink : "none"} strokeWidth={line.strokeWidth} /> : null;
+    return <g data-node={b.id}><rect x={b.x} y={b.y} width={b.w} height={b.h} fill="transparent" />{bg}<Words b={b} src={n.text} color={n.fill === "dark" ? C.paper : n.stroke && n.stroke !== "none" && !bg ? ink : C.g8} /></g>;
   }
   if (b.type === "link") {
     const url = n.url ?? "";
@@ -89,9 +95,8 @@ function NodeArt({ b, n, o, wob }: { b: NodeBox; n: FNode; o: ArtOpts; wob?: str
     const [cx, cy] = [b.x + b.w / 2, b.y + b.h / 2];
     return (
       <g data-node={b.id} transform={`rotate(${tilt(b.id)} ${cx} ${cy})`}>
-        <rect x={b.x + 3} y={b.y + 4} width={b.w} height={b.h} fill="rgba(28,28,30,.12)" />
-        <rect x={b.x} y={b.y} width={b.w} height={b.h} fill={fill} stroke={C.ink} strokeWidth={1.6} filter={wob} />
-        <Words b={b} src={n.text} top={b.y + 18 + b.size * 0.8} />
+        <StickyPaper x={b.x} y={b.y} w={b.w} h={b.h} fill={fill} />
+        <Words b={b} src={n.text} top={b.y + 24 + b.size * 0.8} />
       </g>
     );
   }
@@ -106,13 +111,13 @@ function NodeArt({ b, n, o, wob }: { b: NodeBox; n: FNode; o: ArtOpts; wob?: str
       <g data-node={b.id}>
         <rect x={b.x + OFFSET.x + 1} y={b.y + OFFSET.y + 1} width={b.w} height={imgH} fill={C.g4} />
         {showImg
-          ? <image href={href} x={b.x} y={b.y} width={b.w} height={imgH} preserveAspectRatio="xMidYMid slice" />
+          ? <image href={href} x={b.x} y={b.y} width={b.w} height={imgH} preserveAspectRatio="xMidYMid meet" />
           : <rect x={b.x} y={b.y} width={b.w} height={imgH} fill={C.paper} />}
         <rect x={b.x} y={b.y} width={b.w} height={imgH} fill="none" stroke={ink} strokeWidth={2.2} strokeDasharray={showImg ? undefined : "7 6"} />
         {!showImg ? (
           <text textAnchor="middle" fontFamily={HAND} fontSize={16} fill={C.g7}>
-            <tspan x={b.x + b.w / 2} y={b.y + imgH / 2 - 4}>{info?.state === "missing" ? "Can't find this file" : info?.state === "unknown" ? "Can't find that part" : info?.state === "nokit" ? `Needs ${info.kind === "storyboard" ? "Storyboard Kit" : "Wireframe Kit"} to draw` : "Not drawn yet"}</tspan>
-            <tspan x={b.x + b.w / 2} y={b.y + imgH / 2 + 18} fontSize={13}>{info?.problem ?? ""}</tspan>
+            <tspan x={b.x + b.w / 2} y={b.y + imgH / 2 - 4}>{!n.ref ? "Drop an image here" : info?.state === "missing" ? "Can't find this file" : info?.state === "unknown" ? "Can't find that part" : info?.state === "nokit" ? `Needs ${info.kind === "storyboard" ? "Storyboard Kit" : "Wireframe Kit"} to draw` : "Not drawn yet"}</tspan>
+            <tspan x={b.x + b.w / 2} y={b.y + imgH / 2 + 18} fontSize={13}>{!n.ref ? "or double-click to choose one" : info?.problem ?? ""}</tspan>
           </text>
         ) : null}
         <text x={b.x} y={b.y + imgH + 20} fontFamily={MONO} fontSize={12} fill={C.g7}>{label}</text>
@@ -122,29 +127,36 @@ function NodeArt({ b, n, o, wob }: { b: NodeBox; n: FNode; o: ArtOpts; wob?: str
   }
   if (b.type === "diamond") {
     const d = `M${b.x + b.w / 2} ${b.y} L${b.x + b.w} ${b.y + b.h / 2} L${b.x + b.w / 2} ${b.y + b.h} L${b.x} ${b.y + b.h / 2} Z`;
-    return <g data-node={b.id}><path d={d} fill={n.product ? C.tealTint : C.g2} transform={off} /><path d={d} fill={face} {...line} filter={wob} /><Words b={b} src={n.text} /></g>;
+    return <g data-node={b.id}>{shadow ? <path d={d} fill={n.product ? C.tealTint : C.g2} transform={off} /> : null}<path d={d} fill={face === "none" ? "transparent" : face} {...line} stroke={n.stroke === "none" ? "none" : ink} filter={wob} /><Words b={b} src={n.text} color={words} /></g>;
   }
   const rx = b.type === "pill" ? b.h / 2 : 9;
   return (
     <g data-node={b.id}>
-      <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={rx} fill={n.product ? C.tealTint : C.g2} transform={off} />
-      <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={rx} fill={b.type === "pill" ? (n.product ? PRODUCT_FILL : C.g1) : face} {...line} filter={wob} />
-      <Words b={b} src={n.text} />
+      {shadow ? <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={rx} fill={n.product ? C.tealTint : C.g2} transform={off} /> : null}
+      <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={rx} fill={(b.type === "pill" && !chosen ? (n.product ? PRODUCT_FILL : C.g1) : face) === "none" ? "transparent" : b.type === "pill" && !chosen ? (n.product ? PRODUCT_FILL : C.g1) : face} {...line} stroke={n.stroke === "none" ? "none" : ink} filter={wob} />
+      <Words b={b} src={n.text} color={words} />
     </g>
   );
 }
 
+/** A chevron arrowhead at point p, pointing along `angle`. */
+const chevron = (p: [number, number], angle: number, k: number) =>
+  `M${p[0] - k * Math.cos(angle - 0.45)} ${p[1] - k * Math.sin(angle - 0.45)} L${p[0]} ${p[1]} L${p[0] - k * Math.cos(angle + 0.45)} ${p[1] - k * Math.sin(angle + 0.45)}`;
+
 export function EdgeArt({ e, highlight, wob }: { e: Edge; highlight?: boolean; wob?: string }) {
-  const color = highlight ? C.action : C.g8;
-  const w = highlight ? 3.2 : 2.4;
-  const k = 12, [ex, ey] = e.end;
-  const head = `M${ex - k * Math.cos(e.angle - 0.45)} ${ey - k * Math.sin(e.angle - 0.45)} L${ex} ${ey} L${ex - k * Math.cos(e.angle + 0.45)} ${ey - k * Math.sin(e.angle + 0.45)}`;
+  const base = e.color ? LINE_COLORS[e.color] ?? C.g8 : C.g8;
+  const color = highlight ? C.action : base;
+  const w0 = WEIGHT_PX[e.weight ?? "normal"] ?? 2.4;
+  const w = highlight ? w0 + 0.8 : w0;
+  const k = 10 + w0 * 1.2;
+  const dash = e.style === "dashed" ? `${w0 * 4} ${w0 * 3.2}` : e.style === "dotted" ? `0.1 ${w0 * 2.8}` : undefined;
+  const heads = [e.head === "end" || e.head === "both" ? chevron(e.end, e.angle, k) : "", e.head === "start" || e.head === "both" ? chevron(e.start, e.startAngle, k) : ""].filter(Boolean).join(" ");
   return (
     <g data-edge={e.i}>
       <path d={e.d} fill="none" stroke="transparent" strokeWidth={14} />
       <g filter={wob}>
-        <path d={e.d} fill="none" stroke={color} strokeWidth={w} strokeLinecap="round" strokeDasharray={e.dashed ? "2 8" : undefined} />
-        <path d={head} fill="none" stroke={color} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" />
+        <path d={e.d} fill="none" stroke={color} strokeWidth={w} strokeLinecap="round" strokeDasharray={dash} />
+        {heads ? <path d={heads} fill="none" stroke={color} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" /> : null}
       </g>
     </g>
   );
@@ -164,15 +176,25 @@ function FrameArt({ f, wob }: { f: BoardLayout["frames"][string]; wob?: string }
   );
 }
 
-const Shapes = ({ shapes, dx = 0, dy = 0, prefix }: { shapes?: SketchShape[]; dx?: number; dy?: number; prefix: string }) =>
-  shapes?.length ? <g transform={dx || dy ? `translate(${dx} ${dy})` : undefined}>{shapes.map((s, i) => s?.points?.length ? <g key={i} data-shape={`${prefix}:${i}`}><ShapeMark s={s} /></g> : null)}</g> : null;
+/** Drawings in the back layer (default) or, with `front`, in front of the boxes and cards. */
+const Shapes = ({ shapes, dx = 0, dy = 0, prefix, front = false }: { shapes?: SketchShape[]; dx?: number; dy?: number; prefix: string; front?: boolean }) =>
+  shapes?.length ? <g transform={dx || dy ? `translate(${dx} ${dy})` : undefined}>{shapes.map((s, i) => s?.points?.length && !!(s as { front?: boolean }).front === front ? <g key={i} data-shape={`${prefix}:${i}`}><ShapeMark s={s} /></g> : null)}</g> : null;
 
 /** Everything on the board, in canvas coordinates. */
 export function BoardArt({ doc, L, o = {} }: { doc: FlowchartFile; L: BoardLayout; o?: ArtOpts }) {
   const uid = o.uid ?? "fc";
   const b = o.region ?? { x: L.bounds.x - 400, y: L.bounds.y - 400, w: L.bounds.w + 800, h: L.bounds.h + 800 };
   const wob = o.wobble === false ? undefined : `url(#${uid}-wob)`;
-  const nodes = Object.values(L.nodes).filter((n) => !o.hide?.has(n.id));
+  // nodes draw in the order the file lists them (that's what Forward / To back change)
+  const order = new Map(Object.keys(doc.nodes).map((k, i) => [k, i]));
+  const nodes = Object.values(L.nodes).filter((n) => !o.hide?.has(n.id)).sort((p, q) => (order.get(p.id) ?? 0) - (order.get(q.id) ?? 0));
+  // hand-drawn nodes share one wobble pass; a card (a picture, which shouldn't wobble) splits them into runs
+  const runs: { cards: boolean; list: typeof nodes }[] = [];
+  for (const n of nodes.filter((x) => x.type !== "stamp")) {
+    const isCard = n.type === "card";
+    const last = runs[runs.length - 1];
+    if (last && last.cards === isCard) last.list.push(n); else runs.push({ cards: isCard, list: [n] });
+  }
   const frames = Object.values(L.frames).filter((f) => !f.loose);
   const mk = o.markup !== undefined ? doc.markup?.[o.markup] : undefined;
   const mkOrigin = o.markup ? L.frames[o.markup] : undefined;
@@ -186,10 +208,14 @@ export function BoardArt({ doc, L, o = {} }: { doc: FlowchartFile; L: BoardLayou
         {frames.map((f) => <Shapes key={f.id} shapes={doc.frames?.[f.id]?.shapes} dx={f.ox} dy={f.oy} prefix={f.id} />)}
         {L.edges.map((e) => <EdgeArt key={e.i} e={e} highlight={o.highlightEdge === e.i} />)}
         {L.edges.map((e) => <EdgeLabel key={e.i} e={e} highlight={o.highlightEdge === e.i} />)}
-        {nodes.filter((n) => n.type !== "stamp" && n.type !== "card").map((n) => <NodeArt key={n.id} b={n} n={doc.nodes[n.id]} o={o} />)}
+        {runs[0] && !runs[0].cards ? runs[0].list.map((n) => <NodeArt key={n.id} b={n} n={doc.nodes[n.id]} o={o} />) : null}
       </g>
+      {runs.map((r, k) => (k === 0 && !r.cards ? null : r.cards
+        ? <g key={k}>{r.list.map((n) => <NodeArt key={n.id} b={n} n={doc.nodes[n.id]} o={o} />)}</g>
+        : <g key={k} filter={wob}>{r.list.map((n) => <NodeArt key={n.id} b={n} n={doc.nodes[n.id]} o={o} />)}</g>))}
       {frames.map((f) => doc.frames?.[f.id]?.url ? <LinkBadge key={f.id} url={doc.frames[f.id].url!} x={f.x + f.w - 26} y={f.y + 28} /> : null)}
-      {nodes.filter((n) => n.type === "card").map((n) => <NodeArt key={n.id} b={n} n={doc.nodes[n.id]} o={o} />)}
+      <Shapes shapes={doc.shapes} prefix="" front />
+      {frames.map((f) => <Shapes key={`f${f.id}`} shapes={doc.frames?.[f.id]?.shapes} dx={f.ox} dy={f.oy} prefix={f.id} front />)}
       {nodes.filter((n) => n.type !== "link" && doc.nodes[n.id]?.url).map((n) => <LinkBadge key={n.id} url={doc.nodes[n.id].url!} x={n.x + n.w - 4} y={n.y + 4} />)}
       {nodes.filter((n) => n.type === "stamp").map((n) => <NodeArt key={n.id} b={n} n={doc.nodes[n.id]} o={o} />)}
       {mk?.length ? <g transform={mkOrigin ? `translate(${mkOrigin.ox} ${mkOrigin.oy})` : undefined}><MarkupStrokes strokes={mk} /></g> : null}
@@ -198,11 +224,12 @@ export function BoardArt({ doc, L, o = {} }: { doc: FlowchartFile; L: BoardLayou
 }
 
 /** The board (or one frame, as a slide) as a standalone SVG. */
-export function boardSVG(doc: FlowchartFile, o: ArtOpts & { fontCss?: string; frame?: string; L?: BoardLayout } = {}): string {
+export function boardSVG(doc: FlowchartFile, o: ArtOpts & { fontCss?: string; frame?: string; L?: BoardLayout; box?: Box } = {}): string {
   const L = o.L ?? layoutBoard(doc, o.cards);
   let box: Box, head = 0;
-  const m = 40;
-  if (o.frame !== undefined) {
+  const m = o.box ? 24 : 40;
+  if (o.box) box = o.box;
+  else if (o.frame !== undefined) {
     const s = slides(doc, L).find((x) => x.id === o.frame) ?? { box: L.bounds };
     box = s.box;
   } else { box = L.bounds; head = 78; }

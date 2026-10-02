@@ -226,6 +226,14 @@ button, select, input, textarea { font: inherit; color: inherit; }
 .palette-hint.keys { margin-top: var(--space-4); }
 
 /* inspector */
+.seg.full { display: flex; width: 100%; }
+.seg.full button { flex: 1; padding: 4px 4px; min-width: 0; }
+.swatches.wrap { flex-wrap: wrap; }
+.dot.default { background: repeating-linear-gradient(45deg, #fff 0 3px, var(--color-300) 3px 5px); }
+.dot.none { background: linear-gradient(135deg, transparent 45%, var(--color-danger) 45% 55%, transparent 55%), #fff; }
+.target-box { position: absolute; pointer-events: none; border: solid #e8590c; border-radius: 8px; }
+.dot-handle.target { pointer-events: none; border-color: #e8590c; }
+.dot-handle.target.on { background: #e8590c; }
 .mono-in { font-family: var(--font-mono) !important; font-size: 12px !important; }
 .linkish { border: none; background: none; padding: 0; color: var(--color-ink); text-decoration: underline; text-decoration-color: var(--color-400); cursor: pointer; font: inherit; }
 .linkish:hover { text-decoration-color: var(--color-ink); }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { StickyPaper } from "../../vendor/sketch/sticky";
 import { layoutBoard } from "../layout";
 import { BoardArt } from "../render/board";
 import { Stamp } from "../render/stamps";
@@ -57,7 +58,8 @@ export function Palette({ onAdd, bust, onUpload }: { onAdd: (p: Payload) => void
           <svg className="preview" viewBox="0 0 92 50" width={92} height={50}><rect x={6} y={6} width={80} height={38} rx={6} fill="#fbfaf7" stroke="#959ba2" strokeWidth={2} strokeDasharray="6 4" /><text x={13} y={21} fontFamily="Permanent Marker" fontSize={10} fill="#4d535a">Frame</text></svg>
         </Tile>
         <Tile payload={{ node: { type: "link", text: "A web page", url: "https://" } }} label="Link" onAdd={onAdd}><Preview node={{ type: "link", text: "A web page", url: "https://example.com" }} /></Tile>
-        <label className="tile upload" title="Add a photo, a screenshot or a sketch. It's sketchified in grays to match (switch that off in the inspector). You can also drop or paste images onto the canvas.">
+        <label className="tile upload" draggable title="Click to pick a photo, a screenshot or a sketch, or drag this onto the canvas for an empty image to fill in. Pictures are sketchified in grays to match (switch that off in the inspector). You can also drop or paste images straight onto the canvas."
+          onDragStart={(e) => { e.dataTransfer.setData(DRAG_TYPE, JSON.stringify({ node: { type: "card" } })); e.dataTransfer.effectAllowed = "copy"; }}>
           <svg className="preview" viewBox="0 0 92 50" width={92} height={50}><rect x={18} y={7} width={56} height={36} fill="#fbfaf7" stroke="#1c1c1e" strokeWidth={2} /><path d="M22 39 L36 24 L46 33 L54 26 L70 39" fill="#d7dade" stroke="#1c1c1e" strokeWidth={1.6} strokeLinejoin="round" /><circle cx={58} cy={16} r={4} fill="#b9bec4" stroke="#1c1c1e" strokeWidth={1.4} /></svg>
           <span className="name">Image</span>
           <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ""; }} />
@@ -67,7 +69,7 @@ export function Palette({ onAdd, bust, onUpload }: { onAdd: (p: Payload) => void
       <div className="tiles five">
         {STICKY_COLORS.map((c: StickyColor) => (
           <Tile key={c} payload={{ node: { type: "sticky", text: "", color: c } }} label={c} onAdd={onAdd} className="tile sticky-tile">
-            <span className="sticky-chip" style={{ background: STICKY[c].fill }} title={STICKY[c].doc} />
+            <svg viewBox="0 0 40 40" width={30} height={30} aria-hidden="true"><StickyPaper x={4} y={3} w={32} h={32} fill={STICKY[c].fill} tilt={-3} /></svg>
           </Tile>
         ))}
       </div>
@@ -98,7 +100,7 @@ export function Palette({ onAdd, bust, onUpload }: { onAdd: (p: Payload) => void
         </div>
       ))}
       {near && (!near.kits.storyboard || !near.kits.wireframe) && near.items.length ? <p className="palette-hint">{!near.kits.storyboard && near.items.some((i) => i.kind === "storyboard") ? "Storyboard Kit isn't installed, so storyboard cards show their last picture. " : ""}{!near.kits.wireframe && near.items.some((i) => i.kind === "wireframe") ? "Wireframe Kit isn't installed, so wireframe cards show their last picture." : ""}</p> : null}
-      <p className="palette-hint keys">Tab: next step · Enter: a sibling · S: sticky · drag a dot to connect · double-click empty space for a step · paste a link or an image</p>
+      <p className="palette-hint keys">Tab: next step · Enter: a sibling · S: sticky · drag a dot onto a box to connect · double-click to edit words · paste a link or an image</p>
     </aside>
   );
 }

@@ -7,7 +7,7 @@ questions are, pulls in the storyboard panel or wireframe screen that shows the 
 you push things around, add more, and present it. It's for thinking out loud, by yourself, before anything is
 real.
 
-![Flowchart Kit sizzle reel](docs/sizzle-795ca1b.gif)
+![Flowchart Kit sizzle reel](docs/sizzle-5220749.gif)
 
 ## Why though
 
@@ -19,7 +19,7 @@ So that's what this is: a marker-and-paper canvas where your agent does the bori
 routing the arrows, finding room for the next frame) and you do the thinking. Everything's drawn by hand, so
 nobody mistakes it for a spec.
 
-![A whole board: a happy path, what really happens, and ideas](docs/board-a58ab88.png)
+![A whole board: a happy path, what really happens, and ideas](docs/board-5bb34b4.png)
 
 ## Frames are the story
 
@@ -36,7 +36,7 @@ Flowchart Kit works great on its own. It's also the canvas where the other two k
 [Wireframe Kit](https://github.com/jnemargut/wireframe-kit) draws low-fi screens and flows. Put either on a board
 as a **card**: a whole storyboard, one panel, a whole flow, or one screen.
 
-![Cards: the order status screen and a storyboard panel, right in the flow](docs/cards-c4a18af.png)
+![Cards: the order status screen and a storyboard panel, right in the flow](docs/cards-8be384f.png)
 
 Cards point at the files (`"ref": "./late-latte.storyboard.json#asks"`), so they're never stale copies. Change
 the storyboard and the card catches up on its own. Copy a panel in Storyboard Kit, or a screen in Wireframe Kit,
@@ -89,35 +89,45 @@ Or just click around yourself. Your edits and the agent's land in the same file,
 
 - **Flow shapes.** Start and end pills, steps, decisions, and arrows with labels ("yes", "no", "after 10 min").
   Mark the steps where the product shows up and they turn teal, like in a storyboard.
-- **Stickies** in five colors: yellow for notes, pink for worries, blue for ideas, green for what works, gray for
-  parked.
+- **Stickies** in five colors, with a peeled-up corner so they look stuck on: yellow for notes, pink for worries,
+  blue for ideas, green for what works, gray for parked.
+- **Looks, when you want them.** Text from small to huge, fills (including plain white for covering something up),
+  border colors and weights. Arrows can be curved, angled or straight, solid, dashed or dotted, in any marker color,
+  with an arrowhead at either end, both, or neither.
 - **Stamps.** A click cursor to drop on a screen, a star for the best idea, a smiley, a frown, thumbs up and
   down, a question mark, a flag and a dozen more. Drop one on anything and it sticks to it.
 - **Links.** Paste a URL and it's a link card (a ticket, a doc, a prototype). Any step, sticky or frame can carry
   a link too, and gets a little badge you click to open it.
-- **Images.** Drop, paste or upload a photo, a screenshot or a whiteboard shot. It's sketchified in grays to match
-  (switch that off if you want the real thing).
-- **Text** wherever you want it, with **bold**, *italic* and ~~strikethrough~~ (Cmd+B, Cmd+I).
+- **Images.** Drop, paste or upload a photo, a screenshot or a whiteboard shot, or drag the Image tile out for an
+  empty one to fill in. It's sketchified in grays to match (switch that off if you want the real thing), and
+  **Crop…** shows just the part you want. Cards from the other kits crop too.
+- **Text** wherever you want it, with **bold**, *italic*, underline and ~~strikethrough~~ (Cmd+B, Cmd+I, Cmd+U).
 - **Drawing.** A pen, boxes, ovals, lines, arrows and free text in six marker colors. Draw swimlanes inside a
   frame and they move with it.
 
 ## The editor bits
 
-![The editor: palette, stamps, cards nearby, and a selected step](docs/editor-f66843e.png)
+![The editor: palette, stamps, cards nearby, and a selected step](docs/editor-31e1e5a.png)
 
 **Flowing**
 
 - **Tab** adds the next step and you're already typing in it. Tab again, and again. **Enter** adds a sibling (another
   way out of the same step). **S** sticks a sticky on whatever's selected.
-- Hover a step and drag one of its dots onto another to connect them, or into empty space for a brand-new step.
-- Double-click empty space for a step right there. Double-click anything to change its words.
+- Hover a step and drag one of its dots onto another box to connect them. The box lights up with its own dots: drop
+  on one to pick that side, or anywhere on the box and it picks for you. Drag into empty space for a brand-new step.
+- Double-click anything to change its words.
 
 **Moving things around**
 
 - Drag anything. Drag a sticky into another frame and it moves there. Drag a stamp onto a card and it sticks.
+- Things stay where you put them. Once you've touched a board, small changes (flipping an arrow, a new link) never
+  reshuffle it, and new steps land next to what they're linked to. **Tidy up** lays a frame, or the whole board,
+  out automatically again.
 - Pull the handles to resize. Select a few things (Shift+click, or Shift+drag a box) and **Put in a new frame**.
 - Scroll to pan, pinch (or Cmd+scroll) to zoom, Cmd+0 to fit everything, F to zoom to what's selected.
-- Cmd+C / Cmd+V / Cmd+D copy, paste and duplicate. Delete deletes, Cmd+Z undoes.
+- Cmd+C / Cmd+X / Cmd+V / Cmd+D copy, cut, paste and duplicate. Copying puts a picture of what you copied on the
+  clipboard too, so it pastes straight into Slack or a doc, and pastes back onto a board as the real thing.
+- Cmd+] / Cmd+[ bring things forward or back (add Shift for all the way). Delete deletes, Cmd+Z undoes.
 - **Copy for agent** copies a pointer to whatever you clicked, so you can tell your agent "split this step in two."
 
 **Cards nearby**
@@ -127,7 +137,7 @@ add it next to what's selected, or drag it wherever you like.
 
 ## Present it
 
-![Play: a frame as a slide, sharpie, speaker notes and the slide strip](docs/play-b420b83.png)
+![Play: a frame as a slide, sharpie, speaker notes and the slide strip](docs/play-3b524f6.png)
 
 Hit **Play** (or P). Each frame is a slide, in the order you set in the board's inspector, with a fade or a cut
 between them. No frames? You get the whole board.

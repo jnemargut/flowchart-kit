@@ -12,11 +12,15 @@ import { frameOf, isNote, typeOf, type Cards, type FlowchartFile, type FNode, ty
 export interface Box { x: number; y: number; w: number; h: number }
 export interface NodeBox extends Box { id: string; type: NodeType; frame: string; lines: string[]; size: number }
 export interface FrameBox extends Box { id: string; title: string; /** where frame coordinates start (frame shapes and markup are relative to it) */ ox: number; oy: number; loose: boolean }
-export interface Edge { i: number; from: string; to: string; d: string; end: [number, number]; angle: number; label?: string; lx: number; ly: number; lw: number; dashed: boolean }
+export interface Edge {
+  i: number; from: string; to: string; d: string;
+  start: [number, number]; startAngle: number; end: [number, number]; angle: number;
+  label?: string; lx: number; ly: number; lw: number;
+  style: "solid" | "dashed" | "dotted"; head: "end" | "start" | "both" | "none"; color?: string; weight?: string;
+}
 export interface BoardLayout { nodes: Record<string, NodeBox>; frames: Record<string, FrameBox>; edges: Edge[]; bounds: Box }
 
 export const FONT = 18;
-export const LH = 22;
 const PAD = 32;
 export const TITLE_H = 56;
 export const FRAME_GAP = 120;
@@ -24,50 +28,56 @@ const NOTE_GAP = 18;
 const STEP = 40;
 const LABEL_SIZE = 16;
 
+const SIZE: Record<string, number> = { s: 14, m: 18, l: 24, xl: 32 };
+const TEXT_SIZE: Record<string, number> = { s: 16, m: 20, l: 28, xl: 40 };
+
 /** How big a node is and how its words wrap. */
 export function measure(n: FNode, nudge: { w?: number; h?: number } = {}, card?: Cards[string]): { w: number; h: number; lines: string[]; size: number } {
   const t = typeOf(n);
   const text = n.text ?? "";
+  const FONT = SIZE[n.size ?? "m"] ?? 18, LH = Math.round(FONT * 1.22), k = FONT / 18;
   const widest = (ls: string[], size = FONT) => Math.max(0, ...ls.map((l) => textWidth(l, "hand", size)));
   if (t === "stamp") {
     const s = nudge.w ?? 44;
     return { w: s, h: s, lines: [], size: FONT };
   }
   if (t === "link") {
-    const w = nudge.w ?? 250;
+    const w = nudge.w ?? Math.round(250 * Math.max(1, k));
     const lines = wrap(text || hostOf(n.url ?? ""), "hand", FONT, w - 56).slice(0, 3);
     return { w, h: nudge.h ?? Math.max(64, lines.length * LH + 44), lines, size: FONT };
   }
   if (t === "sticky") {
-    const w = nudge.w ?? 176;
+    const w = nudge.w ?? Math.round(176 * Math.max(1, k));
     const lines = wrap(text, "hand", FONT, w - 30);
-    return { w, h: nudge.h ?? Math.max(116, lines.length * LH + 40), lines, size: FONT };
+    return { w, h: nudge.h ?? Math.max(Math.round(116 * Math.max(1, k)), lines.length * LH + 44), lines, size: FONT };
   }
   if (t === "text") {
-    const size = 20;
-    const lines = wrap(text, "hand", size, nudge.w ? nudge.w - 8 : 300);
-    return { w: nudge.w ?? Math.max(30, widest(lines, size) + 10), h: nudge.h ?? Math.max(28, lines.length * 25 + 6), lines, size };
+    const size = TEXT_SIZE[n.size ?? "m"] ?? 20;
+    const lines = wrap(text, "hand", size, nudge.w ? nudge.w - 8 : 300 * (size / 20));
+    return { w: nudge.w ?? Math.max(30, widest(lines, size) + 10), h: nudge.h ?? Math.max(28, Math.round(lines.length * size * 1.25 + 6)), lines, size };
   }
   if (t === "card") {
     const label = card?.label ?? n.ref ?? "";
-    const iw = card?.w, ih = card?.h;
+    const cr = Array.isArray(n.crop) && n.crop.length === 4 ? n.crop : [0, 0, 1, 1];
+    const iw = card?.w ? card.w * Math.max(0.01, cr[2] - cr[0]) : undefined, ih = card?.h ? card.h * Math.max(0.01, cr[3] - cr[1]) : undefined;
     let w: number, imgH: number;
     if (iw && ih) {
       const tall = ih > iw;
       w = nudge.w ?? (card?.whole ? 440 : tall ? Math.round((300 * iw) / ih) : card?.kind === "image" ? 260 : 300);
+      // the picture keeps its proportions, so the whole storyboard or screen always shows
       imgH = Math.round((w * ih) / iw);
-    } else { w = nudge.w ?? 240; imgH = 150; }
-    return { w, h: nudge.h ?? imgH + 30, lines: [label], size: 13 };
+    } else { w = nudge.w ?? 240; imgH = nudge.h ? Math.max(40, nudge.h - 30) : 150; }
+    return { w, h: imgH + 30, lines: [label], size: 13 };
   }
   if (t === "diamond") {
     const lines = wrap(text, "hand", FONT, nudge.w ? nudge.w * 0.56 : 118);
     const tw = widest(lines);
-    return { w: nudge.w ?? Math.max(136, Math.round(tw * 1.75 + 34)), h: nudge.h ?? Math.max(88, Math.round(lines.length * LH * 1.75 + 26)), lines, size: FONT };
+    return { w: nudge.w ?? Math.max(Math.round(136 * k), Math.round(tw * 1.75 + 34)), h: nudge.h ?? Math.max(Math.round(88 * k), Math.round(lines.length * LH * 1.75 + 26)), lines, size: FONT };
   }
   const pad = t === "pill" ? 40 : 30;
-  const lines = wrap(text, "hand", FONT, nudge.w ? nudge.w - pad : 176);
+  const lines = wrap(text, "hand", FONT, nudge.w ? nudge.w - pad : 176 * k);
   const tw = widest(lines);
-  return { w: nudge.w ?? Math.max(t === "pill" ? 124 : 116, Math.min(240, Math.round(tw + pad))), h: nudge.h ?? Math.max(t === "pill" ? 46 : 54, lines.length * LH + 24), lines, size: FONT };
+  return { w: nudge.w ?? Math.max(Math.round((t === "pill" ? 124 : 116) * Math.min(1, k)), Math.min(240 * k, Math.round(tw + pad))), h: nudge.h ?? Math.max(Math.round((t === "pill" ? 46 : 54) * Math.min(1.4, k)), lines.length * LH + 24), lines, size: FONT };
 }
 
 /** "jira.example.com" from a URL, for labels. */
@@ -102,25 +112,70 @@ const sidePoint = (b: Box, s: SideName): [number, number] => s === "left" ? [b.x
  * A curved arrow between two boxes, leaving and entering on the sides that face each other. When a side is
  * already used by another arrow (a decision's "yes" goes right), that end picks the next best free side.
  */
-export function route(a: NodeBox, b: NodeBox, busyA: Set<SideName> = new Set(), busyB: Set<SideName> = new Set()): { d: string; end: [number, number]; angle: number; mid: [number, number] } {
+export interface RouteOpts { fromSide?: SideName; toSide?: SideName; fromOff?: number; toOff?: number; shape?: "curved" | "angled" | "straight"; /** the flow's direction: leave and arrive along it when the target is ahead */ prefer?: "across" | "down" }
+const portPoint = (b: NodeBox, s: SideName, off = 0): [number, number] => {
+  const p = sidePoint(b, s);
+  if (!off || b.type === "diamond") return p;
+  return s === "left" || s === "right" ? [p[0], p[1] + off] : [p[0] + off, p[1]];
+};
+export function route(a: NodeBox, b: NodeBox, busyA: Set<SideName> = new Set(), busyB: Set<SideName> = new Set(), o: RouteOpts = {}): { d: string; start: [number, number]; startAngle: number; end: [number, number]; angle: number; mid: [number, number]; sides: [SideName, SideName] } {
   const [ax, ay] = center(a), [bx, by] = center(b);
   const dx = bx - ax, dy = by - ay;
-  const horiz = Math.abs(dx) / (a.w / 2 + b.w / 2) >= Math.abs(dy) / (a.h / 2 + b.h / 2);
+  let horiz = Math.abs(dx) / (a.w / 2 + b.w / 2) >= Math.abs(dy) / (a.h / 2 + b.h / 2);
+  if (o.prefer === "across" && b.x >= a.x + a.w + 12) horiz = true;
+  if (o.prefer === "down" && b.y >= a.y + a.h + 12) horiz = false;
   const h: [SideName, SideName] = dx > 0 ? ["right", "left"] : ["left", "right"];
   const v: [SideName, SideName] = dy > 0 ? ["bottom", "top"] : ["top", "bottom"];
   const pick = (end: 0 | 1, busy: Set<SideName>): SideName => {
     const order = horiz ? [h[end], v[end]] : [v[end], h[end]];
     return order.find((s) => !busy.has(s)) ?? order[0];
   };
-  const sa = pick(0, busyA), sb = pick(1, busyB);
-  const s = sidePoint(a, sa), e = sidePoint(b, sb);
+  const sa = o.fromSide ?? pick(0, busyA), sb = o.toSide ?? pick(1, busyB);
+  const s = portPoint(a, sa, o.fromOff), e = portPoint(b, sb, o.toOff);
   const dist = Math.hypot(e[0] - s[0], e[1] - s[1]);
-  const c = Math.max(30, dist * 0.4);
+  const r = (v: number) => Math.round(v * 10) / 10;
+  // close together: a straight line reads better than a squashed curve
+  const facing = NORMAL[sa][0] * (e[0] - s[0]) + NORMAL[sa][1] * (e[1] - s[1]) > 0 && NORMAL[sb][0] * (s[0] - e[0]) + NORMAL[sb][1] * (s[1] - e[1]) > 0;
+  if (o.shape === "angled") return elbow(s, e, sa, sb);
+  if (o.shape === "straight" || (dist < 90 && facing)) {
+    const ang = Math.atan2(e[1] - s[1], e[0] - s[0]);
+    return { d: `M${r(s[0])} ${r(s[1])} L${r(e[0])} ${r(e[1])}`, start: s, startAngle: ang + Math.PI, end: e, angle: ang, mid: [(s[0] + e[0]) / 2, (s[1] + e[1]) / 2], sides: [sa, sb] };
+  }
+  const c = Math.min(Math.max(30, dist * 0.4), 160);
   const c1: [number, number] = [s[0] + NORMAL[sa][0] * c, s[1] + NORMAL[sa][1] * c];
   const c2: [number, number] = [e[0] + NORMAL[sb][0] * c, e[1] + NORMAL[sb][1] * c];
-  const r = (v: number) => Math.round(v * 10) / 10;
   const mid: [number, number] = [0.125 * s[0] + 0.375 * c1[0] + 0.375 * c2[0] + 0.125 * e[0], 0.125 * s[1] + 0.375 * c1[1] + 0.375 * c2[1] + 0.125 * e[1]];
-  return { d: `M${r(s[0])} ${r(s[1])} C${r(c1[0])} ${r(c1[1])} ${r(c2[0])} ${r(c2[1])} ${r(e[0])} ${r(e[1])}`, end: e, angle: Math.atan2(e[1] - c2[1], e[0] - c2[0]), mid };
+  return { d: `M${r(s[0])} ${r(s[1])} C${r(c1[0])} ${r(c1[1])} ${r(c2[0])} ${r(c2[1])} ${r(e[0])} ${r(e[1])}`, start: s, startAngle: Math.atan2(s[1] - c1[1], s[0] - c1[0]), end: e, angle: Math.atan2(e[1] - c2[1], e[0] - c2[0]), mid, sides: [sa, sb] };
+}
+
+/** Right-angle connector: out from each side a little, then across, with softly rounded corners. */
+function elbow(s: [number, number], e: [number, number], sa: SideName, sb: SideName) {
+  const g = 22;
+  const s1: [number, number] = [s[0] + NORMAL[sa][0] * g, s[1] + NORMAL[sa][1] * g];
+  const e1: [number, number] = [e[0] + NORMAL[sb][0] * g, e[1] + NORMAL[sb][1] * g];
+  const hs = sa === "left" || sa === "right", he = sb === "left" || sb === "right";
+  let mids: [number, number][];
+  if (hs && he) { const mx = (s1[0] + e1[0]) / 2; mids = [[mx, s1[1]], [mx, e1[1]]]; }
+  else if (!hs && !he) { const my = (s1[1] + e1[1]) / 2; mids = [[s1[0], my], [e1[0], my]]; }
+  else if (hs) mids = [[e1[0], s1[1]]];
+  else mids = [[s1[0], e1[1]]];
+  const pts = [s, s1, ...mids, e1, e].filter((p, i, a) => !i || Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) > 0.5);
+  const r = (v: number) => Math.round(v * 10) / 10;
+  let d = `M${r(pts[0][0])} ${r(pts[0][1])}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [p0, p1, p2] = [pts[i - 1], pts[i], pts[i + 1]];
+    const l1 = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]), l2 = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+    const rad = Math.min(10, l1 / 2, l2 / 2);
+    const a: [number, number] = [p1[0] + ((p0[0] - p1[0]) / (l1 || 1)) * rad, p1[1] + ((p0[1] - p1[1]) / (l1 || 1)) * rad];
+    const b: [number, number] = [p1[0] + ((p2[0] - p1[0]) / (l2 || 1)) * rad, p1[1] + ((p2[1] - p1[1]) / (l2 || 1)) * rad];
+    d += ` L${r(a[0])} ${r(a[1])} Q${r(p1[0])} ${r(p1[1])} ${r(b[0])} ${r(b[1])}`;
+  }
+  const last = pts[pts.length - 1], prev = pts[pts.length - 2];
+  d += ` L${r(last[0])} ${r(last[1])}`;
+  // label on the middle of the longest run
+  let best = 0, mid: [number, number] = [(s[0] + e[0]) / 2, (s[1] + e[1]) / 2];
+  for (let i = 1; i < pts.length; i++) { const L = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (L > best) { best = L; mid = [(pts[i][0] + pts[i - 1][0]) / 2, (pts[i][1] + pts[i - 1][1]) / 2]; } }
+  return { d, start: s, startAngle: Math.atan2(s[1] - pts[1][1], s[0] - pts[1][0]), end: e, angle: Math.atan2(last[1] - prev[1], last[0] - prev[0]), mid, sides: [sa, sb] as [SideName, SideName] };
 }
 
 /** A polyline from dagre, rounded through its midpoints. */
@@ -145,7 +200,7 @@ function layoutFrame(doc: FlowchartFile, fid: string, ids: string[], cards: Card
   const set = new Set(ids);
   const attached = ids.filter((id) => isNote(nodes[id]) && nodes[id].near && set.has(nodes[id].near!) && nodes[id].near !== id);
   const att = new Set(attached);
-  const links = (doc.links ?? []).map((l, i) => ({ ...l, i })).filter((l) => set.has(l.from) && set.has(l.to) && l.from !== l.to && !att.has(l.from) && !att.has(l.to));
+  const links = (doc.links ?? []).map((l, i) => ({ ...l, i, shape: l.shape ?? doc.connectors })).filter((l) => set.has(l.from) && set.has(l.to) && l.from !== l.to && !att.has(l.from) && !att.has(l.to));
   const flowIds = ids.filter((id) => !att.has(id) && links.some((l) => l.from === id || l.to === id));
   const flowSet = new Set(flowIds);
   const rest = ids.filter((id) => !att.has(id) && !flowSet.has(id));
@@ -187,10 +242,32 @@ function layoutFrame(doc: FlowchartFile, fid: string, ids: string[], cards: Card
     });
   }
 
-  // apply nudges to the flow and the grid (notes follow their node below)
+  // pinned nodes stay exactly where they were put; anything new lands next to what it's linked to
   const nudged = new Set<string>();
+  const isPinned = (id: string) => typeof doc.layout?.[id]?.x === "number" && typeof doc.layout?.[id]?.y === "number";
+  const pinned = Object.keys(boxes).filter(isPinned);
+  if (pinned.length) {
+    const auto = Object.fromEntries(Object.entries(boxes).map(([k, b]) => [k, { x: b.x, y: b.y }]));
+    for (const id of pinned) { boxes[id].x = doc.layout![id].x!; boxes[id].y = doc.layout![id].y!; nudged.add(id); }
+    const shiftOf = (id: string): [number, number] => [boxes[id].x - auto[id].x, boxes[id].y - auto[id].y];
+    const avg: [number, number] = [pinned.reduce((s, id) => s + shiftOf(id)[0], 0) / pinned.length, pinned.reduce((s, id) => s + shiftOf(id)[1], 0) / pinned.length];
+    const placed = new Set(pinned);
+    const down = doc.frames?.[fid]?.dir === "down";
+    for (const id of [...flowIds, ...rest]) {
+      if (placed.has(id) || !boxes[id]) continue;
+      const nb = links.find((l) => l.to === id && placed.has(l.from))?.from ?? links.find((l) => l.from === id && placed.has(l.to))?.to;
+      const [sx, sy] = nb ? shiftOf(nb) : avg;
+      const b = boxes[id];
+      b.x = Math.round(auto[id].x + sx); b.y = Math.round(auto[id].y + sy);
+      // clear of everything already placed, moving along the flow
+      for (let k = 0; k < 200 && [...placed].some((o) => overlaps(b, boxes[o], 16)); k++) { if (down) b.y += 24; else b.x += 24; }
+      placed.add(id);
+      nudged.add(id);
+    }
+  }
   for (const id of Object.keys(boxes)) {
     const nd = doc.layout?.[id];
+    if (isPinned(id)) continue;
     if (nd?.dx || nd?.dy) { boxes[id].x += nd.dx ?? 0; boxes[id].y += nd.dy ?? 0; nudged.add(id); }
   }
 
@@ -232,7 +309,7 @@ function layoutFrame(doc: FlowchartFile, fid: string, ids: string[], cards: Card
   for (const l of links) {
     const a = boxes[l.from], b = boxes[l.to];
     if (!a || !b) continue;
-    edges.push(edgeFor(l.i, l, a, b, !nudged.has(l.from) && !nudged.has(l.to) ? dagreEdges[l.i] : undefined, labelAt[l.i]));
+    edges.push(edgeFor(l.i, l, a, b, !nudged.has(l.from) && !nudged.has(l.to) ? dagreEdges[l.i] : undefined, labelAt[l.i], undefined, { prefer: doc.frames?.[fid]?.dir === "down" ? "down" : "across" }));
   }
   const shapeBoxes = (doc.frames?.[fid]?.shapes ?? []).filter((s) => s.points?.length).map(shapeBounds);
   return { boxes, edges, content: union([...Object.values(boxes), ...edges.filter((e) => e.label).map(labelBox), ...shapeBoxes]) };
@@ -267,18 +344,68 @@ export function shapeBounds(s: SketchShape): Box {
   return { x: b.x - w / 2, y: b.y - h / 2, w, h };
 }
 
-function edgeFor(i: number, l: { from: string; to: string; label?: string; style?: string }, a: NodeBox, b: NodeBox, pts?: [number, number][], lab?: [number, number], busy?: [Set<SideName>, Set<SideName>]): Edge {
+type LinkLike = { from: string; to: string; label?: string; style?: string; head?: string; color?: string; weight?: string; fromSide?: SideName; toSide?: SideName; shape?: "curved" | "angled" | "straight" };
+const looks = (l: LinkLike) => ({ style: (l.style === "dashed" || l.style === "dotted" ? l.style : "solid") as Edge["style"], head: (["start", "both", "none"].includes(l.head ?? "") ? l.head : "end") as Edge["head"], color: l.color, weight: l.weight });
+
+function edgeFor(i: number, l: LinkLike, a: NodeBox, b: NodeBox, pts?: [number, number][], lab?: [number, number], busy?: [Set<SideName>, Set<SideName>], o: RouteOpts = {}): Edge {
   const lw = l.label ? textWidth(l.label, "hand", LABEL_SIZE) + 14 : 0;
-  if (pts && pts.length >= 2) {
+  const forced = l.fromSide || l.toSide || o.fromSide || o.toSide || o.fromOff || o.toOff || (l.shape && l.shape !== "curved");
+  // dagre's path only for arrows that detour around other boxes; short hops leave from the middle of a side
+  if (pts && pts.length > 3 && !forced) {
     const p = [...pts];
     p[0] = clipTo(a, p[0]);
     p[p.length - 1] = clipTo(b, p[p.length - 1]);
     const e = p[p.length - 1], q = p[p.length - 2];
     const mid = lab ?? p[Math.floor(p.length / 2)];
-    return { i, from: l.from, to: l.to, d: smoothPath(p), end: e, angle: Math.atan2(e[1] - q[1], e[0] - q[0]), label: l.label, lx: mid[0], ly: mid[1], lw, dashed: l.style === "dashed" };
+    return { i, from: l.from, to: l.to, d: smoothPath(p), start: p[0], startAngle: Math.atan2(p[0][1] - p[1][1], p[0][0] - p[1][0]), end: e, angle: Math.atan2(e[1] - q[1], e[0] - q[0]), label: l.label, lx: mid[0], ly: mid[1], lw, ...looks(l) };
   }
-  const r = route(a, b, busy?.[0], busy?.[1]);
-  return { i, from: l.from, to: l.to, d: r.d, end: r.end, angle: r.angle, label: l.label, lx: r.mid[0], ly: r.mid[1], lw, dashed: l.style === "dashed" };
+  const r = route(a, b, busy?.[0], busy?.[1], { fromSide: l.fromSide, toSide: l.toSide, shape: l.shape, ...o });
+  return { i, from: l.from, to: l.to, d: r.d, start: r.start, startAngle: r.startAngle, end: r.end, angle: r.angle, label: l.label, lx: r.mid[0], ly: r.mid[1], lw, ...looks(l) };
+}
+
+/** Which side of a box a point sits on. */
+function sideAt(b: NodeBox, p: [number, number]): SideName {
+  const [cx, cy] = center(b);
+  const nx = (p[0] - cx) / (b.w / 2 || 1), ny = (p[1] - cy) / (b.h / 2 || 1);
+  return Math.abs(nx) >= Math.abs(ny) ? (nx > 0 ? "right" : "left") : ny > 0 ? "bottom" : "top";
+}
+
+/**
+ * When several arrows leave or arrive on the same side of a box, fan their ends out along that side (in the order
+ * of where their other ends are), so they don't pile up into one blob of arrowheads.
+ */
+function fanOut(doc: FlowchartFile, nodes: Record<string, NodeBox>, edges: Edge[]): Edge[] {
+  const ends: Record<string, { e: number; which: "from" | "to"; side: SideName; other: [number, number] }[]> = {};
+  edges.forEach((e, k) => {
+    const a = nodes[e.from], b = nodes[e.to];
+    if (!a || !b) return;
+    const sa = sideAt(a, e.start), sb = sideAt(b, e.end);
+    (ends[`${e.from}|${sa}`] ??= []).push({ e: k, which: "from", side: sa, other: center(b) });
+    (ends[`${e.to}|${sb}`] ??= []).push({ e: k, which: "to", side: sb, other: center(a) });
+  });
+  const opts: Record<number, RouteOpts> = {};
+  for (const [key, list] of Object.entries(ends)) {
+    if (list.length < 2) continue;
+    const b = nodes[key.split("|")[0]];
+    if (b.type === "diamond") continue;
+    const along = (p: [number, number]) => (list[0].side === "left" || list[0].side === "right" ? p[1] : p[0]);
+    const room = list[0].side === "left" || list[0].side === "right" ? b.h : b.w;
+    const gap = Math.min(22, (room * 0.8) / list.length);
+    [...list].sort((p, q) => along(p.other) - along(q.other)).forEach((x, j) => {
+      const off = (j - (list.length - 1) / 2) * gap;
+      const o = (opts[x.e] ??= {});
+      if (x.which === "from") { o.fromSide = x.side; o.fromOff = off; } else { o.toSide = x.side; o.toOff = off; }
+    });
+  }
+  return edges.map((e, k) => {
+    if (!opts[k]) return e;
+    const l = doc.links?.[e.i];
+    const a = nodes[e.from], b = nodes[e.to];
+    if (!l || !a || !b) return e;
+    // keep both ends on the sides they were already using
+    const o = { fromSide: sideAt(a, e.start), toSide: sideAt(b, e.end), ...opts[k] };
+    return edgeFor(e.i, { ...l, shape: l.shape ?? doc.connectors } as LinkLike, a, b, undefined, undefined, undefined, o);
+  });
 }
 
 const shift = (b: NodeBox, dx: number, dy: number): NodeBox => ({ ...b, x: b.x + dx, y: b.y + dy });
@@ -365,13 +492,33 @@ export function layoutBoard(doc: FlowchartFile, cards: Cards = {}): BoardLayout 
   };
   for (const f of fids) place(f);
 
+  // a frame that grew into its neighbor pushes the neighbor along (the way it's related, else to the right)
+  for (let pass = 0; pass < 6; pass++) {
+    let moved = false;
+    for (let j = 1; j < fids.length; j++) for (let i = 0; i < j; i++) {
+      const A = placed[fids[i]], B = placed[fids[j]];
+      if (!A || !B || !overlaps(A, B, FRAME_GAP / 2 - 1)) continue;
+      const rel = doc.frames?.[fids[j]]?.near?.[0];
+      let dx = 0, dy = 0;
+      if (rel === "below") dy = A.y + A.h + FRAME_GAP - B.y;
+      else if (rel === "above") dy = A.y - FRAME_GAP - (B.y + B.h);
+      else if (rel === "left of") dx = A.x - FRAME_GAP - (B.x + B.w);
+      else if (B.x >= A.x) dx = A.x + A.w + FRAME_GAP - B.x;
+      else dy = A.y + A.h + FRAME_GAP - B.y;
+      origin[fids[j]] = [origin[fids[j]][0] + dx, origin[fids[j]][1] + dy];
+      placed[fids[j]] = abs(fids[j], origin[fids[j]]);
+      moved = true;
+    }
+    if (!moved) break;
+  }
+
   const nodes: Record<string, NodeBox> = {};
   const frames: Record<string, FrameBox> = {};
   const edges: Edge[] = [];
   for (const f of fids) {
     const [ox, oy] = origin[f];
     for (const b of Object.values(locals[f].boxes)) nodes[b.id] = shift(b, ox, oy);
-    for (const e of locals[f].edges) edges.push({ ...e, d: shiftPath(e.d, ox, oy), end: [e.end[0] + ox, e.end[1] + oy], lx: e.lx + ox, ly: e.ly + oy });
+    for (const e of locals[f].edges) edges.push({ ...e, d: shiftPath(e.d, ox, oy), start: [e.start[0] + ox, e.start[1] + oy], end: [e.end[0] + ox, e.end[1] + oy], lx: e.lx + ox, ly: e.ly + oy });
     frames[f] = { id: f, title: f === "" ? "" : doc.frames?.[f]?.title ?? f, ox, oy, loose: f === "", ...placed[f] };
   }
   // links between frames (or between a frame and the loose area)
@@ -380,9 +527,11 @@ export function layoutBoard(doc: FlowchartFile, cards: Cards = {}): BoardLayout 
     const a = nodes[l?.from], b = nodes[l?.to];
     if (!a || !b || a === b || (a.frame === b.frame && isNote(doc.nodes[l.from]) && doc.nodes[l.from].near)) return;
     if (a.frame === b.frame && edges.some((e) => e.i === i)) return;
-    edges.push(edgeFor(i, l, a, b, undefined, undefined, [sidesUsed(a, edges), sidesUsed(b, edges)]));
+    edges.push(edgeFor(i, { ...l, shape: l.shape ?? doc.connectors }, a, b, undefined, undefined, [sidesUsed(a, edges), sidesUsed(b, edges)]));
   });
   edges.sort((a, b) => a.i - b.i);
+  const fanned = fanOut(doc, nodes, edges);
+  edges.splice(0, edges.length, ...fanned);
 
   const boardShapes = (doc.shapes ?? []).filter((s) => s.points?.length).map(shapeBounds);
   const all = [...Object.values(frames).filter((f) => !f.loose || f.w), ...Object.values(nodes), ...boardShapes];

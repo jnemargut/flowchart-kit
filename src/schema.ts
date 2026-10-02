@@ -1,11 +1,11 @@
 /** JSON Schema for *.flowchart.json, generated from the vocabulary (editors get autocomplete; the validator is stricter). */
-import { MARKER_COLORS, SHAPE_FILLS, SHAPE_TYPES } from "../vendor/sketch/shapes";
-import { FRAME_PROPS, LINK_PROPS, NODE_PROPS, SIDES, STAMP_NAMES, STICKY_COLORS, TYPES } from "./vocab";
+import { MARKER_COLORS, SHAPE_COLORS, SHAPE_FILLS, SHAPE_TYPES, SHAPE_WEIGHTS, TEXT_SIZES as SHAPE_TEXT_SIZES } from "../vendor/sketch/shapes";
+import { CONNECTORS, FILL_NAMES, FRAME_PROPS, HEADS, LINE_COLOR_NAMES, LINK_PROPS, LINK_STYLES, NODE_PROPS, SIDES, SIDES4, STAMP_NAMES, STICKY_COLORS, TEXT_SIZES, TYPES, WEIGHTS } from "./vocab";
 
 const point = { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 };
 const shape = {
   type: "object", required: ["type", "points"],
-  properties: { id: { type: "string" }, type: { enum: [...SHAPE_TYPES] }, points: { type: "array", items: point }, fill: { enum: [...SHAPE_FILLS] }, text: { type: "string" }, color: { enum: [...MARKER_COLORS] } },
+  properties: { id: { type: "string" }, type: { enum: [...SHAPE_TYPES] }, points: { type: "array", items: point }, fill: { enum: [...SHAPE_FILLS] }, text: { type: "string" }, color: { enum: [...SHAPE_COLORS] }, weight: { enum: [...SHAPE_WEIGHTS] }, size: { enum: [...SHAPE_TEXT_SIZES] }, front: { type: "boolean", description: "Drawn in front of the boxes and cards." } },
 };
 const strokes = { type: "array", items: { type: "object", required: ["points"], properties: { points: { type: "array", items: point }, color: { enum: [...MARKER_COLORS] } } } };
 
@@ -49,7 +49,12 @@ export function buildSchema() {
             ref: { type: "string", description: NODE_PROPS.ref },
             url: { type: "string", description: NODE_PROPS.url },
             sketch: { type: "boolean", description: NODE_PROPS.sketch },
+            crop: { type: "array", items: { type: "number", minimum: 0, maximum: 1 }, minItems: 4, maxItems: 4, description: NODE_PROPS.crop },
             product: { type: "boolean", description: NODE_PROPS.product },
+            size: { enum: [...TEXT_SIZES], description: NODE_PROPS.size },
+            fill: { enum: FILL_NAMES, description: NODE_PROPS.fill },
+            stroke: { enum: LINE_COLOR_NAMES, description: NODE_PROPS.stroke },
+            weight: { enum: [...WEIGHTS], description: NODE_PROPS.weight },
           },
         },
       },
@@ -57,14 +62,15 @@ export function buildSchema() {
         type: "array",
         items: {
           type: "object", required: ["from", "to"], additionalProperties: false,
-          properties: { from: { type: "string", description: LINK_PROPS.from }, to: { type: "string", description: LINK_PROPS.to }, label: { type: "string", description: LINK_PROPS.label }, style: { enum: ["solid", "dashed"], description: LINK_PROPS.style } },
+          properties: { from: { type: "string", description: LINK_PROPS.from }, to: { type: "string", description: LINK_PROPS.to }, label: { type: "string", description: LINK_PROPS.label }, style: { enum: [...LINK_STYLES], description: LINK_PROPS.style }, shape: { enum: [...CONNECTORS], description: LINK_PROPS.shape }, head: { enum: [...HEADS], description: LINK_PROPS.head }, color: { enum: LINE_COLOR_NAMES.filter((c) => c !== "none"), description: LINK_PROPS.color }, weight: { enum: [...WEIGHTS], description: LINK_PROPS.weight }, fromSide: { enum: [...SIDES4], description: LINK_PROPS.fromSide }, toSide: { enum: [...SIDES4], description: LINK_PROPS.toSide } },
         },
       },
       present: { type: "array", items: { type: "string" }, description: "Frame ids in presenting order." },
       transition: { enum: ["fade", "cut"] },
+      connectors: { enum: [...CONNECTORS], description: "How links are drawn unless a link says otherwise." },
       shapes: { type: "array", items: shape },
       markup: { type: "object", additionalProperties: strokes },
-      layout: { type: "object", additionalProperties: { type: "object", properties: { dx: { type: "number" }, dy: { type: "number" }, w: { type: "number" }, h: { type: "number" } } } },
+      layout: { type: "object", description: "Written by the editor: x/y pin a node in place (frame coordinates); dx/dy nudge an unpinned one; w/h size it.", additionalProperties: { type: "object", properties: { x: { type: "number" }, y: { type: "number" }, dx: { type: "number" }, dy: { type: "number" }, w: { type: "number" }, h: { type: "number" } } } },
       canvas: { type: "object", additionalProperties: point },
     },
   };

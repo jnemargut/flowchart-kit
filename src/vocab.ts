@@ -58,6 +58,33 @@ export const STAMPS: Record<string, string> = {
 };
 export const STAMP_NAMES = Object.keys(STAMPS);
 
+/** Box fills. "white" is solid white with no shadow: also handy for covering part of a picture. */
+export const FILLS: Record<string, { fill: string; doc: string }> = {
+  white: { fill: "#ffffff", doc: "solid white, no shadow (covers things up)" },
+  paper: { fill: "#fbfaf7", doc: "off-white paper" },
+  light: { fill: "#e4e6e8", doc: "light gray" },
+  mid: { fill: "#b9bec4", doc: "mid gray" },
+  dark: { fill: "#4d535a", doc: "dark gray (words turn white)" },
+  yellow: { fill: "#fff3a8", doc: "yellow" },
+  pink: { fill: "#ffd6dc", doc: "pink" },
+  blue: { fill: "#d4e6ff", doc: "blue" },
+  green: { fill: "#d3f5dc", doc: "green" },
+  teal: { fill: "#e6f5f6", doc: "teal tint (the product)" },
+  none: { fill: "none", doc: "see-through" },
+};
+export const FILL_NAMES = Object.keys(FILLS);
+/** Borders and arrow colors: the marker colors, plus teal (the product) and none. */
+export const LINE_COLORS: Record<string, string> = { ink: "#1c1c1e", grey: "#6f777f", red: "#d9363e", blue: "#2f6fd0", green: "#2f9e44", orange: "#e8590c", teal: "#0b7f8a", none: "none" };
+export const LINE_COLOR_NAMES = Object.keys(LINE_COLORS);
+export const WEIGHTS = ["thin", "normal", "thick"] as const;
+export const WEIGHT_PX: Record<string, number> = { thin: 1.3, normal: 2.4, thick: 4.4 };
+export const TEXT_SIZES = ["s", "m", "l", "xl"] as const;
+export const TEXT_SIZE_LABEL: Record<string, string> = { s: "Small", m: "Medium", l: "Large", xl: "Huge" };
+export const LINK_STYLES = ["solid", "dashed", "dotted"] as const;
+export const HEADS = ["end", "start", "both", "none"] as const;
+export const CONNECTORS = ["curved", "angled", "straight"] as const;
+export const SIDES4 = ["left", "right", "top", "bottom"] as const;
+
 export const SIDES: Side[] = ["right of", "left of", "below", "above"];
 
 /** Node props and what they mean, for the schema and the docs. */
@@ -70,9 +97,14 @@ export const NODE_PROPS: Record<string, string> = {
   icon: `stamps: ${STAMP_NAMES.join(" | ")}`,
   at: "stamps on a node: [x, y] as fractions of it (default [1, 0], its top-right corner)",
   ref: "cards: a path to a storyboard, panel, wireframe, screen or image",
+  crop: "cards: [left, top, right, bottom] as fractions of the picture (the editor's Crop button writes it)",
   sketch: "image cards: false shows the picture as it is (default: sketchified in grays to match)",
   url: "a web address; link cards show it, anything else gets a clickable link badge",
   product: "true draws it teal: this is where the product shows up",
+  size: "text size: s | m (default) | l | xl",
+  fill: `boxes, pills, decisions, text: ${Object.keys(FILLS).join(" | ")}`,
+  stroke: "border color: ink | grey | red | blue | green | orange | teal | none",
+  weight: "border weight: thin | normal (default) | thick",
 };
 
 export const FRAME_PROPS: Record<string, string> = {
@@ -87,5 +119,11 @@ export const LINK_PROPS: Record<string, string> = {
   from: "node id",
   to: "node id",
   label: "a word or two on the arrow (\"yes\", \"no\", \"after 10 min\")",
-  style: `"solid" (default) or "dashed" (maybe, later, a weaker link)`,
+  style: `"solid" (default), "dashed" (maybe, later) or "dotted" (a weak or implied link)`,
+  shape: `"curved", "angled" (right-angle elbows) or "straight" (default: the board's "connectors", else curved)`,
+  head: `arrowheads: "end" (default), "start", "both" or "none" (a plain line)`,
+  color: "ink | grey (default) | red | blue | green | orange | teal",
+  weight: "thin | normal (default) | thick",
+  fromSide: `which side it leaves from: "left" | "right" | "top" | "bottom" (default: the layout picks)`,
+  toSide: "which side it arrives on (same choices)",
 };

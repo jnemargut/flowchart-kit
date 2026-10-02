@@ -78,9 +78,14 @@ A storyboard, a storyboard panel, a wireframe flow or screen, or an image, point
 - `icon`: stamps: cursor | star | smiley | meh | frown | heart | thumbs-up | thumbs-down | question | alert | check | cross | idea | flag | clock | eye | fire | dollar
 - `at`: stamps on a node: [x, y] as fractions of it (default [1, 0], its top-right corner)
 - `ref`: cards: a path to a storyboard, panel, wireframe, screen or image
+- `crop`: cards: [left, top, right, bottom] as fractions of the picture (the editor's Crop button writes it)
 - `sketch`: image cards: false shows the picture as it is (default: sketchified in grays to match)
 - `url`: a web address; link cards show it, anything else gets a clickable link badge
 - `product`: true draws it teal: this is where the product shows up
+- `size`: text size: s | m (default) | l | xl
+- `fill`: boxes, pills, decisions, text: white | paper | light | mid | dark | yellow | pink | blue | green | teal | none
+- `stroke`: border color: ink | grey | red | blue | green | orange | teal | none
+- `weight`: border weight: thin | normal (default) | thick
 
 ## Sticky colors
 
@@ -124,4 +129,10 @@ A storyboard, a storyboard panel, a wireframe flow or screen, or an image, point
 - `from`: node id
 - `to`: node id
 - `label`: a word or two on the arrow ("yes", "no", "after 10 min")
-- `style`: "solid" (default) or "dashed" (maybe, later, a weaker link)
+- `style`: "solid" (default), "dashed" (maybe, later) or "dotted" (a weak or implied link)
+- `shape`: "curved", "angled" (right-angle elbows) or "straight" (default: the board's "connectors", else curved)
+- `head`: arrowheads: "end" (default), "start", "both" or "none" (a plain line)
+- `color`: ink | grey (default) | red | blue | green | orange | teal
+- `weight`: thin | normal (default) | thick
+- `fromSide`: which side it leaves from: "left" | "right" | "top" | "bottom" (default: the layout picks)
+- `toSide`: which side it arrives on (same choices)

@@ -65,6 +65,10 @@ path. **Below, `fc` is short for that whole command.**
 - **Show, don't describe.** If a storyboard panel or a wireframe screen exists for a moment, put it on the board
   as a `card` and link to it from the step (`"style": "dashed"` reads as "see this").
 - **Speaker notes.** A frame's `notes` say what to point out when it's on screen.
-- **Emphasis is fine, sparingly.** Any text can use `**bold**`, `*italic*` and `~~struck out~~`
-  (designers get Cmd+B and Cmd+I in the editor). Bold the one word that matters, strike what changed.
+- **Emphasis is fine, sparingly.** Any text can use `**bold**`, `*italic*`, `__underline__` and
+  `~~struck out~~` (designers get Cmd+B, Cmd+I and Cmd+U in the editor). Bold the one word that matters,
+  strike what changed.
+- **Looks are optional.** Boxes take `size` (s, m, l, xl), `fill`, `stroke` and `weight`; arrows take
+  `shape` (curved, angled, straight), `style` (solid, dashed, dotted), `head` (end, start, both, none),
+  `color` and `weight`. Use them to mean something (red for where it breaks), not to decorate.
 - 5 to 15 things per frame. Split bigger ones.

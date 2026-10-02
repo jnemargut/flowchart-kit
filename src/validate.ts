@@ -1,17 +1,23 @@
 /** Checks a flowchart file. Errors say exactly what to change; warnings are nudges toward a clearer board. */
 import { formatIssues, suggest, type Issue, type Result } from "../vendor/sketch/suggest";
 import { parseRef } from "./refs";
+import { isCrop } from "../vendor/sketch/crop";
 import { layoutBoard } from "./layout";
 import { isNote, typeOf, type FlowchartFile } from "./types";
-import { NODE_TYPES, SIDES, STAMP_NAMES, STICKY_COLORS, TYPES } from "./vocab";
+import { CONNECTORS, FILL_NAMES, HEADS, LINE_COLOR_NAMES, LINK_STYLES, NODE_TYPES, SIDES, SIDES4, STAMP_NAMES, STICKY_COLORS, TEXT_SIZES, TYPES, WEIGHTS } from "./vocab";
 
 export type { Result };
 
-const NODE_KEYS = ["type", "text", "frame", "color", "near", "icon", "at", "ref", "url", "sketch", "product"];
+const NODE_KEYS = ["type", "text", "frame", "color", "near", "icon", "at", "ref", "url", "sketch", "crop", "product", "size", "fill", "stroke", "weight"];
 const FRAME_KEYS = ["title", "near", "dir", "notes", "url", "shapes", "size"];
 const okUrl = (u: unknown) => typeof u === "string" && /^(https?:\/\/|mailto:|figma:|file:|\.{0,2}\/)\S+$/i.test(u.trim());
-const LINK_KEYS = ["from", "to", "label", "style"];
-const TOP_KEYS = ["$schema", "title", "frames", "nodes", "links", "present", "transition", "shapes", "markup", "layout", "canvas"];
+const LINK_KEYS = ["from", "to", "label", "style", "shape", "head", "color", "weight", "fromSide", "toSide"];
+/** One of a fixed set, with a "did you mean". */
+const pick = (err: (p: string, m: string, h?: string) => void, path: string, v: unknown, options: readonly string[], what: string) => {
+  if (v === undefined) return;
+  if (!options.includes(String(v))) { const s = suggest(String(v), options); err(path, `"${String(v)}" isn't a ${what}.`, s ? `Did you mean "${s}"?` : `Use one of: ${options.join(", ")}`); }
+};
+const TOP_KEYS = ["$schema", "title", "frames", "nodes", "links", "present", "transition", "connectors", "shapes", "markup", "layout", "canvas"];
 
 export function validate(doc: FlowchartFile): Result {
   const errors: Issue[] = [], warnings: Issue[] = [];
@@ -75,14 +81,20 @@ export function validate(doc: FlowchartFile): Result {
       if (n.at !== undefined) warn(`${p}.at`, `"at" only applies to stamps.`);
     }
     if (t === "card") {
-      if (!n.ref) err(`${p}.ref`, "A card needs a ref: the file it shows.", 'e.g. "ref": "./late-latte.storyboard.json#in-line"');
+      if (!n.ref) warn(`${p}.ref`, "This card is empty: it doesn't show anything yet.", 'Give it a "ref", e.g. "./late-latte.storyboard.json#in-line" or "./photo.jpg". In the editor, drop an image on it.');
       else if (!parseRef(n.ref).kind) err(`${p}.ref`, `Cards show storyboards, wireframes or images, not "${n.ref}".`, 'Point at "x.storyboard.json", "x.storyboard.json#panel", "x.wireframe.json#screen" or an image.');
     } else if (n.ref !== undefined) warn(`${p}.ref`, `"ref" only applies to cards.`, 'Add "type": "card".');
     if (["box", "pill", "diamond", "sticky", "text"].includes(t) && !(n.text ?? "").trim()) warn(`${p}.text`, `This ${NODE_TYPES[t].label.toLowerCase()} has no words.`);
     if (["box", "pill", "diamond"].includes(t) && (n.text ?? "").length > 70) warn(`${p}.text`, "That's long for a step. Keep steps to a few words and put the rest on a sticky beside it.", `Add { "type": "sticky", "near": "${id}", "text": "…" }.`);
     if (n.url !== undefined && !okUrl(n.url)) err(`${p}.url`, `"${n.url}" doesn't look like a web address.`, 'Start it with https://, e.g. "https://example.atlassian.net/browse/ORDER-412"');
     if (t === "link" && !n.url) err(`${p}.url`, "A link card needs a url.", '"url": "https://…"');
+    if (n.crop !== undefined && !isCrop(n.crop)) err(`${p}.crop`, '"crop" is [left, top, right, bottom], fractions from 0 to 1.', 'e.g. "crop": [0, 0.1, 1, 0.6] keeps the top half (minus a sliver).');
+    if (n.crop !== undefined && t !== "card") warn(`${p}.crop`, `"crop" only applies to cards.`);
     if (n.sketch !== undefined && (t !== "card" || !n.ref || parseRef(n.ref).kind !== "image")) warn(`${p}.sketch`, `"sketch" only applies to image cards.`);
+    pick(err, `${p}.size`, n.size, TEXT_SIZES, "text size");
+    pick(err, `${p}.fill`, n.fill, FILL_NAMES, "fill");
+    pick(err, `${p}.stroke`, n.stroke, LINE_COLOR_NAMES, "border color");
+    pick(err, `${p}.weight`, n.weight, WEIGHTS, "line weight");
     if (n.product !== undefined && typeof n.product !== "boolean") err(`${p}.product`, '"product" is true or false.');
   }
 
@@ -97,7 +109,13 @@ export function validate(doc: FlowchartFile): Result {
       else if (!doc.nodes[l[end]]) { const s = suggest(l[end], ids); err(`${p}.${end}`, `There's no node "${l[end]}".`, s ? `Did you mean "${s}"?` : undefined); }
     }
     if (l.from && l.from === l.to) warn(p, "This link goes from a node to itself.");
-    if (l.style !== undefined && l.style !== "solid" && l.style !== "dashed") err(`${p}.style`, '"style" is "solid" or "dashed".');
+    pick(err, `${p}.style`, l.style, LINK_STYLES, "line style");
+    pick(err, `${p}.head`, l.head, HEADS, "arrowhead setting");
+    pick(err, `${p}.shape`, l.shape, CONNECTORS, "connector shape");
+    pick(err, `${p}.color`, l.color, LINE_COLOR_NAMES.filter((c) => c !== "none"), "line color");
+    pick(err, `${p}.weight`, l.weight, WEIGHTS, "line weight");
+    pick(err, `${p}.fromSide`, l.fromSide, SIDES4, "side");
+    pick(err, `${p}.toSide`, l.toSide, SIDES4, "side");
     const k = `${l.from}→${l.to}`;
     if (seen.has(k)) warn(p, `There are two links from "${l.from}" to "${l.to}".`, "Merge them, or label each one.");
     seen.add(k);
@@ -118,6 +136,7 @@ export function validate(doc: FlowchartFile): Result {
     else doc.present.forEach((f, i) => { if (!frames[f]) { const s = suggest(String(f), frameIds); err(`present[${i}]`, `There's no frame "${f}".`, s ? `Did you mean "${s}"?` : `Frames: ${frameIds.join(", ")}`); } });
   }
   if (doc.transition !== undefined && doc.transition !== "fade" && doc.transition !== "cut") err("transition", '"transition" is "fade" or "cut".');
+  pick(err, "connectors", doc.connectors, CONNECTORS, "connector shape");
 
   // board-level nudges
   const counts: Record<string, number> = {};

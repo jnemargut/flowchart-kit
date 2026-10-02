@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CropDialog } from "../../vendor/sketch/crop-dialog";
 import type { MarkupStroke, SketchShape } from "../../vendor/sketch/shapes";
 import { shapeBox } from "../../vendor/sketch/shapes";
 import type { Result } from "../../vendor/sketch/suggest";
@@ -6,7 +7,7 @@ import { TOOL_KEYS, Tools, type DrawTool } from "../../vendor/sketch/tools";
 import { fitView, type View } from "../../vendor/sketch/view";
 import { center, frameAt, homeFrame, layoutBoard, slides, type BoardLayout, type Box } from "../layout";
 import { textWidth } from "../text";
-import { isNote, typeOf, type Cards, type FlowchartFile, type FNode } from "../types";
+import { isNote, typeOf, type Cards, type FlowchartFile, type FNode, type Side4 } from "../types";
 import { validate } from "../validate";
 import { api, cardUrl } from "./api";
 import { boxOf, Canvas, type EditEnd, type InlineEdit } from "./Canvas";
@@ -39,6 +40,7 @@ export function App() {
   const [tool, setTool] = useState<DrawTool>("select");
   const [color, setColor] = useState("ink");
   const [editing, setEditing] = useState<InlineEdit | null>(null);
+  const [cropping, setCropping] = useState<string | null>(null);
   const undo = useRef<FlowchartFile[]>([]);
   const redo = useRef<FlowchartFile[]>([]);
   const lastCo = useRef<string | undefined>(undefined);
@@ -93,8 +95,10 @@ export function App() {
   };
 
   /** Every change goes through here: undo history (typing coalesces), validation, save. */
-  const edit = (next: FlowchartFile, coalesce?: string) => {
-    if (!doc || next === doc) return;
+  const edit = (raw: FlowchartFile, coalesce?: string, o: { pin?: boolean } = {}) => {
+    if (!doc || raw === doc) return;
+    // once you edit by hand, what's on the board stays put: nothing reshuffles because of a small change
+    const next = o.pin === false || !base ? raw : M.pinAll(doc, base, raw);
     if (coalesce === undefined || coalesce !== lastCo.current) { undo.current.push(doc); if (undo.current.length > 200) undo.current.shift(); redo.current = []; }
     lastCo.current = coalesce;
     setDoc(next);
@@ -168,7 +172,7 @@ export function App() {
       const n = d.nodes[id], b = Lx.nodes[id];
       if (!n || !b) return;
       const t = typeOf(n);
-      if (t === "card") { if (n.ref) a.openCard(n.ref); return; }
+      if (t === "card") { if (n.ref) a.openCard(n.ref); else chooseImage(id); return; }
       if (t === "stamp") { setFocusText((x) => x + 1); return; }
       setEditing({ key, value: n.text ?? "", box: b, size: t === "text" ? 20 : 18, face: "hand", multiline: t !== "link", align: t === "link" || t === "text" ? "left" : "center" });
     } else if (kind === "frame") {
@@ -245,6 +249,8 @@ export function App() {
   // ---- the inspector's verbs (and the keyboard's)
 
   const a: InspectorActions = {
+    chooseImage: (id) => chooseImage(id),
+    crop: (id) => setCropping(id),
     set: (path, value, co) => doc && edit(M.setAt(doc, path, value), co),
     select: setSel,
     remove: () => {
@@ -325,6 +331,42 @@ export function App() {
       const all = Object.keys(doc.frames ?? {});
       edit(M.setAt(doc, ["present"], order.length === all.length && order.every((f, i) => f === all[i]) ? undefined : order));
     },
+    arrange: (to) => {
+      if (!doc) return;
+      let d = doc;
+      const nodeIds = sel.filter((k) => k.startsWith("node:")).map((k) => k.slice(5));
+      if (nodeIds.length) {
+        // nodes draw in the order they're listed
+        const keys = Object.keys(d.nodes);
+        let order = [...keys];
+        const move = (id: string, i: number) => { order = order.filter((k) => k !== id); order.splice(Math.max(0, Math.min(order.length, i)), 0, id); };
+        for (const id of to === "front" || to === "forward" ? [...nodeIds].reverse() : nodeIds) {
+          const i = order.indexOf(id);
+          move(id, to === "front" ? order.length : to === "back" ? 0 : to === "forward" ? i + 1 : i - 1);
+        }
+        d = { ...d, nodes: Object.fromEntries(order.map((k) => [k, d.nodes[k]])) };
+      }
+      const keys2: M.Key[] = [];
+      for (const k of sel.filter((x) => x.startsWith("shape:"))) {
+        const [, f, i0] = k.split(":");
+        const path = f ? ["frames", f, "shapes"] : ["shapes"];
+        const list = [...((M.getAt(d, path) as SketchShape[] | undefined) ?? [])];
+        const i = Number(i0);
+        const [s] = list.splice(i, 1);
+        if (!s) continue;
+        const shape = { ...s } as SketchShape & { front?: boolean };
+        // drawings sit behind the boxes unless brought to the front
+        if (to === "front") shape.front = true;
+        if (to === "back") delete shape.front;
+        const j = to === "front" ? list.length : to === "back" ? 0 : to === "forward" ? Math.min(list.length, i + 1) : Math.max(0, i - 1);
+        list.splice(j, 0, shape);
+        d = M.setAt(d, path, list);
+        keys2.push(`shape:${f}:${j}`);
+      }
+      edit(d);
+      if (keys2.length) setSel([...sel.filter((k) => !k.startsWith("shape:")), ...keys2]);
+    },
+    tidy: (frame) => { if (doc && base) { edit(M.autoLayout(doc, base, frame), undefined, { pin: false }); flash(frame === undefined ? "Laid out the whole board again." : "Laid out this frame again."); } },
     reverseLink: (i) => { const l = doc?.links?.[i]; if (doc && l) edit(M.setAt(doc, ["links", i], { ...l, from: l.to, to: l.from })); },
   };
 
@@ -357,11 +399,13 @@ export function App() {
     const only = sel.length === 1 && sel[0].startsWith("node:") ? sel[0].slice(5) : undefined;
     if (only && doc.nodes[only]) {
       const Lm = layoutBoard(d, cards);
-      const b = Lm.nodes[only];
+      // where you let go (not where the layout ends up: growing a frame can push it along)
+      const b0 = base.nodes[only];
+      const b = b0 ? { ...b0, x: b0.x + dx, y: b0.y + dy } : Lm.nodes[only];
       const n = doc.nodes[only];
       const [cx, cy] = center(b);
       if (n.type === "stamp") {
-        const target = Object.values(Lm.nodes).filter((x) => x.type !== "stamp" && x.id !== only && cx >= x.x && cx <= x.x + x.w && cy >= x.y && cy <= x.y + x.h).pop();
+        const target = Object.values(base.nodes).filter((x) => x.type !== "stamp" && x.id !== only && cx >= x.x && cx <= x.x + x.w && cy >= x.y && cy <= x.y + x.h).pop();
         let nd = M.setAt(d, ["layout", only, "dx"], undefined);
         nd = M.setAt(nd, ["layout", only, "dy"], undefined);
         if (target) {
@@ -371,12 +415,12 @@ export function App() {
           return;
         }
         const s = { ...nd.nodes[only] }; delete s.near; delete s.at;
-        const f = frameAt(Lm, cx, cy);
+        const f = frameAt(base, cx, cy);
         if (f) s.frame = f; else delete s.frame;
         edit(M.placeAt(M.setAt(nd, ["nodes", only], s), only, b.x, b.y, cards));
         return;
       }
-      const target = n.near ? Lm.nodes[n.near] : undefined;
+      const target = n.near ? base.nodes[n.near] : undefined;
       const far = target && Math.hypot(cx - center(target)[0], cy - center(target)[1]) > 320;
       // frames as they were before the drag (its own frame grows to follow it while you drag)
       const f = frameAt(base, cx, cy);
@@ -400,6 +444,8 @@ export function App() {
       const n = doc.nodes[id];
       const cur = { ...(doc.layout?.[id] ?? {}) };
       if (n?.type === "stamp") { const s = Math.max(20, Math.max(to.w, to.h)); cur.w = s; cur.h = undefined; }
+      // cards keep their picture's proportions: only the width counts
+      else if (n?.type === "card") { cur.w = Math.max(60, to.w); cur.h = undefined; }
       else { cur.w = to.w; cur.h = to.h; }
       if (to.x !== from.x) cur.dx = (cur.dx ?? 0) + (to.x - from.x);
       if (to.y !== from.y) cur.dy = (cur.dy ?? 0) + (to.y - from.y);
@@ -446,10 +492,10 @@ export function App() {
     window.setTimeout(() => startEdit(key, next, layoutBoard(next, cards)), 0);
   };
 
-  const onConnect = (from: string, to: string | null, x: number, y: number) => {
+  const onConnect = (from: string, to: string | null, x: number, y: number, sides?: { from: Side4; to: Side4 }) => {
     if (!doc || !base) return;
     if (to) {
-      const d = M.addLink(doc, from, to);
+      const d = M.addLink(doc, from, to, sides ? { fromSide: sides.from, toSide: sides.to } : {});
       if (d === doc) { flash("They're already connected."); return; }
       edit(d);
       setSel([`edge:${(d.links ?? []).length - 1}`]);
@@ -459,10 +505,11 @@ export function App() {
     addAndEdit({ doc: M.addLink(r.doc, from, r.id), id: r.id });
   };
 
-  const onDouble = (key: M.Key | null, x: number, y: number) => {
+  /** Double-click edits whatever's under the pointer. (It never makes anything new.) */
+  const onDouble = (key: M.Key) => {
     if (!doc || !base) return;
-    if (key) { setSel([key]); startEdit(key); return; }
-    addAndEdit(addAt(doc, { text: "" }, x, y, base));
+    setSel([key]);
+    startEdit(key);
   };
 
   const add = (p: Payload, at?: { x: number; y: number }) => {
@@ -518,10 +565,13 @@ export function App() {
   const onDrop = (payload: string, x: number, y: number) => {
     try { add(JSON.parse(payload) as Payload, { x, y }); } catch { /* not ours */ }
   };
-  const onDropFile = async (f: File, x: number, y: number) => {
+  const onDropFile = async (f: File, x: number, y: number, into?: string) => {
     if (!doc || !base) return;
     try {
       const up = await api.upload(f);
+      // dropped on an empty image card (or picked for one): fill it in
+      const slot = into ?? Object.values(base.nodes).find((b) => b.type === "card" && !doc.nodes[b.id]?.ref && x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h)?.id;
+      if (slot && doc.nodes[slot]) { edit(M.setAt(doc, ["nodes", slot, "ref"], up.ref ?? up.path)); setSel([`node:${slot}`]); return; }
       const r = addAt(doc, { type: "card", ref: up.ref ?? up.path }, x, y, base);
       edit(r.doc);
       setSel([`node:${r.id}`]);
@@ -529,7 +579,75 @@ export function App() {
     } catch { flash("Couldn't add that image."); }
   };
 
+  /** Open the file picker for an empty image card. */
+  const picker = useRef<HTMLInputElement>(null);
+  const pickFor = useRef<string | undefined>(undefined);
+  const chooseImage = (id: string) => { pickFor.current = id; picker.current?.click(); };
+
   const onMarkup = (frame: string, strokes: MarkupStroke[]) => { if (doc) edit(M.setAt(doc, ["markup", frame], strokes.length ? strokes : undefined)); };
+
+  type Pack = { nodes: Record<string, FNode>; links?: FlowchartFile["links"] };
+  /** Copied things, pasted onto this board: fresh ids, into the frame under the pointer. */
+  const pastePack = (pack: Pack, at: { x: number; y: number }) => {
+    if (!doc || !base) return;
+    let d = doc;
+    const ids: Record<string, string> = {};
+    const fr = frameAt(base, at.x, at.y);
+    for (const [old, n0] of Object.entries(pack.nodes)) {
+      const n: FNode = { ...n0 };
+      if (n.near && !pack.nodes[n.near]) delete n.near;
+      if (!n.near) { if (fr) n.frame = fr; else delete n.frame; }
+      const r = M.addNode(d, n, M.newId(d, n));
+      ids[old] = r.id; d = r.doc;
+    }
+    for (const n of Object.values(ids).map((id) => d.nodes[id])) if (n.near) n.near = ids[n.near];
+    for (const l of pack.links ?? []) if (ids[l.from] && ids[l.to]) { const { from: _f, to: _t, ...rest } = l; d = M.addLink(d, ids[l.from], ids[l.to], rest); }
+    // keep their arrangement, centered where you're pointing
+    const olds = Object.keys(ids).filter((k) => base.nodes[k]);
+    if (olds.length) {
+      const bx = Math.min(...olds.map((k) => base.nodes[k].x)), by = Math.min(...olds.map((k) => base.nodes[k].y));
+      const bw = Math.max(...olds.map((k) => base.nodes[k].x + base.nodes[k].w)) - bx, bh = Math.max(...olds.map((k) => base.nodes[k].y + base.nodes[k].h)) - by;
+      for (const k of olds) if (!(isNote(pack.nodes[k]) && pack.nodes[k].near && ids[pack.nodes[k].near!])) d = M.placeAt(d, ids[k], at.x - bw / 2 + (base.nodes[k].x - bx), at.y - bh / 2 + (base.nodes[k].y - by), cards);
+    } else {
+      const first = Object.values(ids)[0];
+      if (first && Object.keys(ids).length === 1) d = placeCentered(d, first, at.x, at.y);
+    }
+    edit(d);
+    setSel(Object.values(ids).map((id) => `node:${id}`));
+  };
+
+  /** What's copied: the picture for other apps, and the things themselves for boards. */
+  const lastCopy = useRef<{ pack: Pack; size?: number } | null>(null);
+  const copySelection = async (cut = false) => {
+    if (!doc || !base || !sel.length) return;
+    const frameIds = sel.filter((k) => k.startsWith("frame:")).map((k) => k.slice(6));
+    const ids = [...new Set([...sel.filter((k) => k.startsWith("node:")).map((k) => k.slice(5)), ...Object.values(base.nodes).filter((b) => frameIds.includes(b.frame)).map((b) => b.id)])];
+    const withNotes = [...new Set([...ids, ...Object.entries(doc.nodes).filter(([, n]) => n.near && ids.includes(n.near)).map(([k]) => k)])];
+    const pack: Pack = { nodes: Object.fromEntries(withNotes.map((id) => [id, doc.nodes[id]])), links: (doc.links ?? []).filter((l) => withNotes.includes(l.from) && withNotes.includes(l.to)) };
+    const boxes = [...sel.map((k) => boxOf(doc, base, k)), ...withNotes.map((id) => base.nodes[id])].filter(Boolean) as Box[];
+    const x0 = Math.min(...boxes.map((b) => b.x)), y0 = Math.min(...boxes.map((b) => b.y));
+    const x1 = Math.max(...boxes.map((b) => b.x + b.w)), y1 = Math.max(...boxes.map((b) => b.y + b.h));
+    const json = JSON.stringify({ [CLIP]: pack });
+    lastCopy.current = { pack };
+    // a cut feels instant: it's gone now, and the clipboard catches up in a moment
+    if (cut) a.remove();
+    try {
+      const png = fetch(`/api/region.png?x=${Math.round(x0)}&y=${Math.round(y0)}&w=${Math.round(x1 - x0)}&h=${Math.round(y1 - y0)}&scale=2`).then((r) => r.blob()).then((b) => { if (lastCopy.current) lastCopy.current.size = b.size; return b; });
+      const custom = (ClipboardItem as unknown as { supports?: (t: string) => boolean }).supports?.("web application/x-flowchart");
+      await navigator.clipboard.write([new ClipboardItem(custom ? { "image/png": png, "web application/x-flowchart": new Blob([json], { type: "application/x-flowchart" }) } : { "image/png": png })]);
+      flash(cut ? "Cut. It's on the clipboard as a picture (for Slack, docs…) and as itself (for any board)." : "Copied as a picture (paste into Slack, a doc…) and as itself (paste onto any board).");
+    } catch {
+      await navigator.clipboard.writeText(json).catch(() => undefined);
+      flash(cut ? "Cut. Paste it onto any board." : "Copied. Paste it onto any board, or to your agent as JSON.");
+    }
+  };
+
+  const ownClip = async (): Promise<Pack | undefined> => {
+    try {
+      for (const item of await navigator.clipboard.read()) if (item.types.includes("web application/x-flowchart")) return JSON.parse(await (await item.getType("web application/x-flowchart")).text())?.[CLIP];
+    } catch { /* no permission, or not ours */ }
+    return undefined;
+  };
 
   /** The note Storyboard Kit and Wireframe Kit put next to a copied picture (where the browser allows it). */
   const kitClip = async (): Promise<{ file: string; part?: string } | undefined> => {
@@ -559,6 +677,10 @@ export function App() {
       const img = [...(e.clipboardData?.files ?? [])].find((f) => f.type.startsWith("image/"));
       if (img) {
         e.preventDefault();
+        // copied here (or on another board): paste the things, not a picture of them
+        const own = await ownClip();
+        if (own) { pastePack(own, at); return; }
+        if (lastCopy.current?.size === img.size) { pastePack(lastCopy.current.pack, at); return; }
         // a panel copied in Storyboard Kit or a screen from Wireframe Kit carries a note saying where it's from
         const src = await kitClip();
         const ref = src ? (await api.find(src.file).catch(() => ({ ref: null }))).ref : null;
@@ -577,26 +699,8 @@ export function App() {
       e.preventDefault();
       try {
         const o = JSON.parse(text);
-        const pack = o?.[CLIP] as { nodes: Record<string, FNode>; links: FlowchartFile["links"] } | undefined;
-        if (pack?.nodes) {
-          let d = doc;
-          const ids: Record<string, string> = {};
-          const fr = frameAt(base, at.x, at.y);
-          for (const [old, n0] of Object.entries(pack.nodes)) {
-            const n: FNode = { ...n0 };
-            if (n.near && !pack.nodes[n.near]) delete n.near;
-            if (!n.near) { if (fr) n.frame = fr; else delete n.frame; }
-            const r = M.addNode(d, n, M.newId(d, n));
-            ids[old] = r.id; d = r.doc;
-          }
-          for (const n of Object.values(ids).map((id) => d.nodes[id])) if (n.near) n.near = ids[n.near];
-          for (const l of pack.links ?? []) if (ids[l.from] && ids[l.to]) d = M.addLink(d, ids[l.from], ids[l.to], { ...(l.label ? { label: l.label } : {}), ...(l.style === "dashed" ? { style: "dashed" as const } : {}) });
-          const first = Object.values(ids)[0];
-          if (first && Object.keys(ids).length === 1) d = placeCentered(d, first, at.x, at.y);
-          edit(d);
-          setSel(Object.values(ids).map((id) => `node:${id}`));
-          return;
-        }
+        const pack = o?.[CLIP] as Pack | undefined;
+        if (pack?.nodes) { pastePack(pack, at); return; }
       } catch { /* plain text */ }
       const t = text.trim();
       const url = isUrl(t) ? (t.startsWith("www.") ? `https://${t}` : t) : undefined;
@@ -612,7 +716,7 @@ export function App() {
   // keyboard
   useEffect(() => {
     const onKey = async (e: KeyboardEvent) => {
-      if (play !== null || !doc) return;
+      if (play !== null || cropping || !doc) return;
       const typing = (e.target as HTMLElement).closest("input,textarea,select,[contenteditable]");
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) step(redo, undo); else step(undo, redo); return; }
@@ -625,13 +729,16 @@ export function App() {
       if ((e.key === "Delete" || e.key === "Backspace") && sel.length) { e.preventDefault(); a.remove(); return; }
       if (mod && e.key.toLowerCase() === "d" && sel.length) { e.preventDefault(); a.duplicate(); return; }
       if (mod && e.key.toLowerCase() === "a") { e.preventDefault(); setSel(Object.keys(doc.nodes).map((id) => `node:${id}`)); return; }
-      if (mod && e.key.toLowerCase() === "c" && sel.some((k) => k.startsWith("node:"))) {
+      if (mod && (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "x") && sel.some((k) => k.startsWith("node:") || k.startsWith("frame:"))) {
         e.preventDefault();
-        const ids = sel.filter((k) => k.startsWith("node:")).map((k) => k.slice(5));
-        const nodes = Object.fromEntries(ids.map((id) => [id, doc.nodes[id]]));
-        const links = (doc.links ?? []).filter((l) => ids.includes(l.from) && ids.includes(l.to));
-        await navigator.clipboard.writeText(JSON.stringify({ [CLIP]: { nodes, links } }, null, 2)).catch(() => undefined);
-        flash("Copied. Paste onto any board, or to your agent as JSON.");
+        await copySelection(e.key.toLowerCase() === "x");
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "x" && sel.length) { e.preventDefault(); a.remove(); return; }
+      if (mod && (e.code === "BracketRight" || e.code === "BracketLeft") && sel.length) {
+        e.preventDefault();
+        const up = e.code === "BracketRight";
+        a.arrange(e.shiftKey ? (up ? "front" : "back") : up ? "forward" : "backward");
         return;
       }
       if (mod && e.key === "0") { e.preventDefault(); fit(); return; }
@@ -709,6 +816,8 @@ export function App() {
         <Inspector doc={doc} L={base} cards={cards} sel={sel} result={result} a={a} focusText={focusText} />
       </div>
       {toast ? <div className="toast">{toast}</div> : null}
+      {cropping && doc.nodes[cropping] ? <CropDialog src={`/card/${encodeURIComponent(cropping)}?full=1&v=${bust}`} crop={doc.nodes[cropping].crop} onCancel={() => setCropping(null)} onDone={(c) => { edit(M.setAt(doc, ["nodes", cropping, "crop"], c)); setCropping(null); }} /> : null}
+      <input ref={picker} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={(e) => { const f = e.target.files?.[0]; const id = pickFor.current; if (f && id && base?.nodes[id]) { const b = base.nodes[id]; onDropFile(f, b.x + b.w / 2, b.y + b.h / 2, id); } e.target.value = ""; }} />
       {play !== null ? <Play doc={doc} L={base} cards={cards} cardHref={cardHref} start={play} onMarkup={onMarkup} onExit={(f) => { setPlay(null); if (f) setSel([`frame:${f}`]); }} /> : null}
     </div>
   );

@@ -63,8 +63,10 @@ export function resolveCard(ref: string, base: string, refresh = true): CardInfo
   const { file, part, kind } = parseRef(ref);
   const label = `${basename(file)}${part ? `#${part}` : ""}`;
   const abs = resolve(base, file);
+  if (!ref) return { state: "missing", kind: "image", label: "", problem: "" };
   if (!kind) return { state: "unknown", kind: "image", label, problem: "cards point at .storyboard.json, .wireframe.json or an image" };
-  if (!ref || !existsSync(abs)) return { state: "missing", kind, label, problem: file };
+  if (!ref) return { state: "missing", kind: "image", label: "", problem: "" };
+  if (!existsSync(abs)) return { state: "missing", kind, label, problem: file };
   if (kind === "image") { const s = pngSize(abs); return { state: "ok", kind, png: abs, w: s?.w, h: s?.h, label }; }
   const parts = partsOf(abs, kind);
   if (part && !parts.ids.includes(part)) return { state: "unknown", kind, label, problem: `no ${kind === "storyboard" ? "panel" : "screen"} "${part}"` };
