@@ -346,6 +346,13 @@ ok("S shows every slide", (await page.locator(".play-strip .thumb").count()) ===
 await page.keyboard.press("Escape");
 ok("Esc leaves Play", (await page.locator(".play").count()) === 0);
 
+// the properties panel can be hidden (button or Cmd+\\) and comes back
+await page.keyboard.press("Escape");
+await page.getByRole("button", { name: "Properties" }).click();
+ok("Properties hides the panel", (await page.locator(".inspector").count()) === 0);
+await page.keyboard.press("Meta+Backslash");
+ok("Cmd+\\ brings it back", (await page.locator(".inspector").count()) === 1);
+
 // exports from the editor
 for (const fmt of ["png", "svg", "pdf", "pptx", "canvas"]) {
   const r = await page.evaluate(async (f) => { const res = await fetch(`/api/export?format=${f}`); return { ok: res.ok, n: (await res.arrayBuffer()).byteLength }; }, fmt);

@@ -42,6 +42,8 @@ button, select, input, textarea { font: inherit; color: inherit; }
 /* layout */
 .main { display: grid; grid-template-columns: 1fr 300px; min-height: 0; }
 .main.with-palette { grid-template-columns: 220px 1fr 300px; }
+.main.no-props { grid-template-columns: 1fr; }
+.main.with-palette.no-props { grid-template-columns: 220px 1fr; }
 
 /* palette */
 .palette { background: var(--color-paper); border-right: 2px solid var(--color-ink); overflow-y: auto; padding: var(--space-3); }
