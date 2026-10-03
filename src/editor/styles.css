@@ -103,8 +103,8 @@ button, select, input, textarea { font: inherit; color: inherit; }
 .color-pop { position: absolute; left: 42px; bottom: 0; display: flex; gap: 2px; background: var(--color-paper); border: 2px solid var(--color-ink); padding: 4px; box-shadow: var(--shadow-l2); }
 .color-pop button { width: 30px; height: 30px; display: grid; place-items: center; background: none; border: none; cursor: pointer; }
 .color-pop button.on, .swatches button.on { outline: 2px solid var(--color-product); outline-offset: -2px; }
-.swatches { display: flex; flex-wrap: wrap; gap: 2px; max-width: 100%; }
-.swatches button { width: 28px; height: 28px; display: grid; place-items: center; background: none; border: none; cursor: pointer; }
+.swatches { display: flex; flex-wrap: wrap; gap: 0; max-width: 100%; }
+.swatches button { width: 26px; height: 28px; display: grid; place-items: center; background: none; border: none; cursor: pointer; }
 /* icon picker, geometry */
 .icon-picker { position: relative; display: block; }
 .icon-current { width: 100%; display: flex; align-items: center; gap: 6px; border: 1.5px solid var(--color-400); background: #fff; padding: 3px 6px; cursor: pointer; font-size: var(--text-sm); }
@@ -281,3 +281,7 @@ a.btn { text-decoration: none; color: inherit; display: inline-block; }
 .quick button { border: 1.5px solid var(--color-400); background: #fff; padding: 2px 7px; cursor: pointer; font-size: 12px; }
 .quick button:hover { border-color: var(--color-ink); }
 .quick button.on { background: var(--color-ink); color: var(--color-paper); border-color: var(--color-ink); }
+
+.sel-box.locked { border-style: dashed !important; }
+.seg.icons button { padding: 3px 6px; display: inline-grid; place-items: center; }
+.actions.arrange { margin-top: 6px; }

@@ -34,6 +34,12 @@ export interface SketchShape {
   weight?: string;
   /** Text size for a "text" shape: s, m (default), l, xl. */
   size?: string;
+  /** Turned around its middle, in degrees clockwise. */
+  rotate?: number;
+  /** Can't be moved or resized until it's unlocked (a background picture, a frame of reference). */
+  locked?: boolean;
+  /** Shapes and boxes with the same group id are selected and moved together. */
+  group?: string;
 }
 
 /** A sharpie stroke from play mode. */
@@ -68,6 +74,12 @@ export function smooth(pts: [number, number][]): string {
 
 /** One shape in marker style: ink outline, gray fill, round ends. `scale` sizes line widths and text for bigger canvases. */
 export function ShapeMark({ s, scale = 1 }: { s: SketchShape; scale?: number }) {
+  // turned around its middle (a text shape's middle is its point)
+  if (s.rotate && s.points?.length) {
+    const b = shapeBox(s);
+    const [cx, cy] = s.type === "text" ? s.points[0] : [b.x + b.w / 2, b.y + b.h / 2];
+    return <g transform={`rotate(${s.rotate} ${cx} ${cy})`}><ShapeMark s={{ ...s, rotate: undefined }} scale={scale} /></g>;
+  }
   if (s.type === "text") {
     // hand-lettered, centered on its point; a clear box behind makes it easy to grab
     const [x, y] = s.points[0];

@@ -5,7 +5,7 @@ import { CONNECTORS, FILL_NAMES, FRAME_PROPS, HEADS, LINE_COLOR_NAMES, LINK_PROP
 const point = { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 };
 const shape = {
   type: "object", required: ["type", "points"],
-  properties: { id: { type: "string" }, type: { enum: [...SHAPE_TYPES] }, points: { type: "array", items: point }, fill: { enum: [...SHAPE_FILLS] }, text: { type: "string" }, color: { anyOf: [{ enum: [...SHAPE_COLORS] }, { type: "string", pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", description: "Any color as a hex, e.g. \"#e8b04b\"." }] }, weight: { enum: [...SHAPE_WEIGHTS] }, size: { enum: [...SHAPE_TEXT_SIZES] }, front: { type: "boolean", description: "Drawn in front of the boxes and cards." } },
+  properties: { id: { type: "string" }, type: { enum: [...SHAPE_TYPES] }, points: { type: "array", items: point }, fill: { enum: [...SHAPE_FILLS] }, text: { type: "string" }, color: { anyOf: [{ enum: [...SHAPE_COLORS] }, { type: "string", pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", description: "Any color as a hex, e.g. \"#e8b04b\"." }] }, weight: { enum: [...SHAPE_WEIGHTS] }, size: { enum: [...SHAPE_TEXT_SIZES] }, front: { type: "boolean", description: "Drawn in front of the boxes and cards." }, rotate: { type: "number", description: "Turned around its middle, degrees clockwise." }, locked: { type: "boolean", description: "Stays put until unlocked (editor-owned)." }, group: { type: "string", description: "Moves with others in the same group (editor-owned)." } },
 };
 const strokes = { type: "array", items: { type: "object", required: ["points"], properties: { points: { type: "array", items: point }, color: { anyOf: [{ enum: [...MARKER_COLORS] }, { type: "string", pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", description: "Any color as a hex, e.g. \"#e8b04b\"." }] } } } };
 
@@ -50,6 +50,8 @@ export function buildSchema() {
             url: { type: "string", description: NODE_PROPS.url },
             sketch: { type: "boolean", description: NODE_PROPS.sketch },
             mirror: { type: "boolean", description: NODE_PROPS.mirror },
+            locked: { type: "boolean", description: "Stays put until unlocked (editor-owned)." },
+            group: { type: "string", description: "Selected and moved with others in the same group (editor-owned)." },
             turn: { enum: [0, 90, 180, 270], description: NODE_PROPS.turn },
             crop: { type: "array", items: { type: "number", minimum: 0, maximum: 1 }, minItems: 4, maxItems: 4, description: NODE_PROPS.crop },
             product: { type: "boolean", description: NODE_PROPS.product },

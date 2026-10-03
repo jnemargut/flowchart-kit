@@ -141,6 +141,18 @@
                 "front": {
                   "type": "boolean",
                   "description": "Drawn in front of the boxes and cards."
+                },
+                "rotate": {
+                  "type": "number",
+                  "description": "Turned around its middle, degrees clockwise."
+                },
+                "locked": {
+                  "type": "boolean",
+                  "description": "Stays put until unlocked (editor-owned)."
+                },
+                "group": {
+                  "type": "string",
+                  "description": "Moves with others in the same group (editor-owned)."
                 }
               }
             }
@@ -253,6 +265,14 @@
           "mirror": {
             "type": "boolean",
             "description": "image cards: true flips the picture left to right"
+          },
+          "locked": {
+            "type": "boolean",
+            "description": "Stays put until unlocked (editor-owned)."
+          },
+          "group": {
+            "type": "string",
+            "description": "Selected and moved with others in the same group (editor-owned)."
           },
           "turn": {
             "enum": [
@@ -564,6 +584,18 @@
           "front": {
             "type": "boolean",
             "description": "Drawn in front of the boxes and cards."
+          },
+          "rotate": {
+            "type": "number",
+            "description": "Turned around its middle, degrees clockwise."
+          },
+          "locked": {
+            "type": "boolean",
+            "description": "Stays put until unlocked (editor-owned)."
+          },
+          "group": {
+            "type": "string",
+            "description": "Moves with others in the same group (editor-owned)."
           }
         }
       }

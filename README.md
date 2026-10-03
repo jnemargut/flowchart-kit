@@ -156,7 +156,7 @@ what's installed.
 - **Text** wherever you want it, with **bold**, *italic*, underline and ~~strikethrough~~ (Cmd+B, Cmd+I, Cmd+U).
 - **Drawing.** A pen, boxes, ovals, lines, arrows and free text in six marker colors (or any color you pick), thin,
   normal or thick, and text in four sizes. Draw swimlanes inside a
-  frame and they move with it.
+  frame and they move with it. Shortcuts: V, D, R, O, L, A, T (the same in every kit).
 
 ## The editor bits
 
@@ -181,6 +181,17 @@ what's installed.
 - Cmd+C / Cmd+X / Cmd+V / Cmd+D copy, cut, paste and duplicate. Copying puts a picture of what you copied on the
   clipboard too, so it pastes straight into Slack or a doc, and pastes back onto a board as the real thing.
 - Cmd+] / Cmd+[ bring things forward or back (add Shift for all the way). Delete deletes, Cmd+Z undoes.
+
+**Lining things up**
+
+- Drag something near another box and guides pop up when edges or middles line up, and it snaps. Hold Option to
+  drag freely.
+- Select a few things and the side panel lines them up (left, center, right, top, middle, bottom) or spaces them
+  out evenly.
+- **Group** (Cmd+G) ties things together so clicking one picks them all up. Shift+Cmd+G ungroups.
+- **Lock** (Shift+Cmd+L) keeps something put while you work around it. Same keys unlock it.
+- **Copy style** (Option+Cmd+C) and **Paste style** (Option+Cmd+V) move colors, lines and text size from one thing
+  to another.
 - **Copy for agent** copies a pointer to whatever you clicked, so you can tell your agent "split this step in two."
 
 **Cards nearby**

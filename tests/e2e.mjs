@@ -369,6 +369,89 @@ ok("Properties hides the panel", (await page.locator(".inspector").count()) === 
 await page.keyboard.press("Meta+Backslash");
 ok("Cmd+\\ brings it back", (await page.locator(".inspector").count()) === 1);
 
+// arranging: Shift-click two stickies, line them up, group them, lock them, then copy one sticky's style onto another
+{
+  const L = (id) => page.evaluate((i) => window.__fc.L.nodes[i], id);
+  await page.keyboard.press("Escape"); await page.keyboard.press("Escape");
+  await page.keyboard.press("Meta+0");
+  await sleep(300);
+  await click(await at("queue"));
+  await page.keyboard.down("Shift"); await click(await at("bump")); await page.keyboard.up("Shift");
+  ok("Shift-click adds to the selection", (await sel()).length === 2, JSON.stringify(await sel()));
+  await page.getByRole("button", { name: "Align tops" }).click();
+  ok("Align tops lines them up", await until(async () => (await L("queue")).y === (await L("bump")).y));
+  await page.getByRole("button", { name: "Group", exact: true }).click();
+  ok("Group ties them together", await until(() => read().nodes.queue.group && read().nodes.queue.group === read().nodes.bump.group));
+  await page.keyboard.press("Escape");
+  await click(await at("queue"));
+  ok("clicking one picks up its group", (await sel()).length === 2, JSON.stringify(await sel()));
+  await page.keyboard.press("Meta+Shift+l");
+  ok("Shift+Cmd+L locks them", await until(() => read().nodes.queue.locked && read().nodes.bump.locked));
+  const q0 = await L("queue"), qp = await at("queue");
+  await page.mouse.move(qp.x, qp.y); await page.mouse.down(); await page.mouse.move(qp.x + 80, qp.y + 40, { steps: 6 }); await page.mouse.up();
+  await sleep(500);
+  const q1 = await L("queue");
+  ok("a locked sticky doesn't move when dragged", q0.x === q1.x && q0.y === q1.y, JSON.stringify([q0, q1]));
+  await page.keyboard.press("Meta+Shift+l");
+  ok("Shift+Cmd+L again unlocks", await until(() => !read().nodes.queue.locked));
+  await page.keyboard.press("Meta+Shift+g");
+  ok("Shift+Cmd+G ungroups", await until(() => !read().nodes.queue.group));
+  await page.keyboard.press("Escape");
+  await click(await at("text-me"));
+  await page.keyboard.press("Alt+Meta+c");
+  await page.keyboard.press("Escape");
+  await click(await at("refund"));
+  await page.keyboard.press("Alt+Meta+v");
+  ok("Option+Cmd+C / V copies a sticky's style onto another", await until(() => read().nodes.refund.color === "blue"), JSON.stringify(read().nodes.refund));
+  await page.keyboard.press("Escape");
+}
+
+// the same checklist for a selected drawing in every kit (Storyboard and Wireframe run it too):
+// any hex color, line thickness, duplicate, layer, cut and paste, undo and redo, delete
+{
+  const HEX = "#7a3cb5";
+  const all = () => { const d = read(); return [...(d.shapes ?? []), ...Object.values(d.frames ?? {}).flatMap((f) => f.shapes ?? [])]; };
+  const mine = () => all().filter((s) => s.type === "rect" && s.color === HEX);
+  const lists = () => JSON.stringify([read().shapes, ...Object.values(read().frames ?? {}).map((f) => f.shapes)]);
+  await page.keyboard.press("Escape"); await page.keyboard.press("Escape");
+  await page.keyboard.press("Meta+0");
+  await sleep(300);
+  await page.getByRole("button", { name: "Marker color", exact: true }).click();
+  await page.getByRole("button", { name: "Any marker color" }).click();
+  await page.getByLabel("Hex color").fill(HEX);
+  await page.getByLabel("Hex color").press("Enter");
+  await page.getByRole("button", { name: "Line thickness", exact: true }).click();
+  await page.getByRole("button", { name: "thick", exact: true }).click();
+  await page.keyboard.press("r");
+  const [p1, p2] = await page.evaluate(() => {
+    const { L, view } = window.__fc;
+    const f = L.frames.late;
+    const c = document.querySelector(".canvas").getBoundingClientRect();
+    const p = (x, y) => ({ x: c.left + view.x + x * view.k, y: c.top + view.y + y * view.k });
+    return [p(f.x + 30, f.y + f.h - 110), p(f.x + 130, f.y + f.h - 50)];
+  });
+  await page.mouse.move(p1.x, p1.y); await page.mouse.down(); await page.mouse.move(p2.x, p2.y, { steps: 6 }); await page.mouse.up();
+  ok("checklist: a box drawn in any hex color with a thick line", await until(() => mine().length === 1 && mine()[0].weight === "thick"), JSON.stringify(all().slice(-1)));
+  await page.keyboard.press("v");
+  await page.keyboard.press("Meta+d");
+  ok("checklist: Cmd+D duplicates the drawing", await until(() => mine().length === 2));
+  const order = lists();
+  await page.keyboard.press("Meta+Shift+BracketLeft");
+  ok("checklist: Cmd+Shift+[ sends it to the back", await until(() => lists() !== order));
+  await page.keyboard.press("Meta+x");
+  ok("checklist: Cmd+X cuts it", await until(() => mine().length === 1));
+  await page.mouse.move(p2.x + 60, p2.y);
+  await page.keyboard.press("Meta+v");
+  ok("checklist: Cmd+V pastes it back as a drawing", await until(() => mine().length === 2));
+  await page.keyboard.press("Meta+z");
+  ok("checklist: undo", await until(() => mine().length === 1));
+  await page.keyboard.press("Meta+Shift+z");
+  ok("checklist: redo", await until(() => mine().length === 2));
+  await page.keyboard.press("Delete");
+  ok("checklist: Delete removes it", await until(() => mine().length === 1));
+  await page.keyboard.press("Escape");
+}
+
 // exports from the editor
 for (const fmt of ["png", "svg", "pdf", "pptx", "canvas"]) {
   const r = await page.evaluate(async (f) => { const res = await fetch(`/api/export?format=${f}`); return { ok: res.ok, n: (await res.arrayBuffer()).byteLength }; }, fmt);

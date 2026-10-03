@@ -23,7 +23,7 @@ type Dropper = { open: () => Promise<{ sRGBHex: string }> };
 const dropper = (): (new () => Dropper) | undefined => (typeof window !== "undefined" ? (window as unknown as { EyeDropper?: new () => Dropper }).EyeDropper : undefined);
 
 const dot = (bg: string, square?: boolean) => ({ width: 18, height: 18, borderRadius: square ? 4 : 9, background: bg, border: "1.5px solid rgba(0,0,0,0.35)", display: "block" });
-const btn = { width: 28, height: 28, display: "grid", placeItems: "center", background: "none", border: "none", cursor: "pointer", padding: 0 } as const;
+const btn = { width: 26, height: 28, display: "grid", placeItems: "center", background: "none", border: "none", cursor: "pointer", padding: 0 } as const;
 
 /**
  * Put it right after a row of preset swatches. `value` is the current color (a preset name or a hex);

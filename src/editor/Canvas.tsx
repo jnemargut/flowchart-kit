@@ -44,6 +44,9 @@ interface Props {
 const inside = (b: Box, x: number, y: number, pad = 0) => x >= b.x - pad && x <= b.x + b.w + pad && y >= b.y - pad && y <= b.y + b.h + pad;
 const hits = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
+const unionBox = (bs: Box[]): Box => { const x = Math.min(...bs.map((b) => b.x)), y = Math.min(...bs.map((b) => b.y)); return { x, y, w: Math.max(...bs.map((b) => b.x + b.w)) - x, h: Math.max(...bs.map((b) => b.y + b.h)) - y }; };
+const lockedKey = (doc: FlowchartFile, k: Key) => { const [kind, id, i] = k.split(":"); return kind === "node" ? !!doc.nodes[id]?.locked : kind === "shape" ? !!(id ? doc.frames?.[id]?.shapes : doc.shapes)?.[Number(i)]?.locked : false; };
+
 /** Where a selection key sits on the canvas. */
 export function boxOf(doc: FlowchartFile, L: BoardLayout, key: Key): Box | undefined {
   const [kind, id, i] = key.split(":");
@@ -82,7 +85,7 @@ export function Canvas(p: Props) {
   const [space, setSpace] = useState(false);
   const [marquee, setMarquee] = useState<Box | null>(null);
   const [wire, setWire] = useState<{ from: string; side: Side4; x: number; y: number; to?: string; toSide?: Side4 } | null>(null);
-  const drag = useRef<{ kind: "pan" | "move" | "resize" | "draw" | "marquee" | "connect" | "bend"; edge?: number; bend0?: [number, number]; sx: number; sy: number; vx: number; vy: number; wx: number; wy: number; moved: boolean; key?: Key; handle?: Handle; from?: Box; points?: [number, number][]; node?: string; side?: Side4; click?: Key } | null>(null);
+  const drag = useRef<{ kind: "pan" | "move" | "resize" | "draw" | "marquee" | "connect" | "bend"; edge?: number; bend0?: [number, number]; snap?: { box: Box; others: Box[] }; last?: [number, number]; sx: number; sy: number; vx: number; vy: number; wx: number; wy: number; moved: boolean; key?: Key; handle?: Handle; from?: Box; points?: [number, number][]; node?: string; side?: Side4; click?: Key } | null>(null);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => { if (e.code === "Space" && !(e.target as HTMLElement).closest("input,textarea,select")) { setSpace(true); e.preventDefault(); } };
@@ -149,7 +152,12 @@ export function Canvas(p: Props) {
     if (e.shiftKey) { p.onSelect(p.sel.includes(key) ? p.sel.filter((k) => k !== key) : [...p.sel, key]); return; }
     if (!p.sel.includes(key)) p.onSelect([key]);
     if (key.startsWith("edge:")) return;
-    begin(e, { ...base, kind: "move", key, click: p.sel.includes(key) && p.sel.length > 1 ? key : undefined });
+    // what the moving things could line up with: every other box on the board
+    const moving = (p.sel.includes(key) ? p.sel : [key]).filter((k) => !k.startsWith("edge:"));
+    const boxes = moving.map((k) => boxOf(p.doc, p.L, k)).filter(Boolean) as Box[];
+    const ids = new Set(moving.filter((k) => k.startsWith("node:")).map((k) => k.slice(5)));
+    const snap = boxes.length ? { box: unionBox(boxes), others: Object.values(p.L.nodes).filter((n) => !ids.has(n.id) && n.type !== "stamp") } : undefined;
+    begin(e, { ...base, kind: "move", key, snap, click: p.sel.includes(key) && p.sel.length > 1 ? key : undefined });
   };
 
   const resized = (d: NonNullable<typeof drag.current>, dx: number, dy: number): Box => {
@@ -160,6 +168,27 @@ export function Canvas(p: Props) {
     if (h.includes("w")) { w = Math.max(24, f.w - dx); x = f.x + f.w - w; }
     if (h.includes("n")) { hh = Math.max(24, f.h - dy); y = f.y + f.h - hh; }
     return { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(hh) };
+  };
+
+  /** Line the moving things' edges and middles up with other boxes' (within a few screen px). Option turns it off. */
+  const [guides, setGuides] = useState<{ x?: number; y?: number; from: number; to: number }[]>([]);
+  const snapped = (d: NonNullable<typeof drag.current>, dx: number, dy: number, off: boolean): [number, number] => {
+    if (!d.snap || off) { setGuides([]); return [Math.round(dx), Math.round(dy)]; }
+    const tol = 6 / p.view.k;
+    const b = { ...d.snap.box, x: d.snap.box.x + dx, y: d.snap.box.y + dy };
+    const xs = [b.x, b.x + b.w / 2, b.x + b.w], ys = [b.y, b.y + b.h / 2, b.y + b.h];
+    let bestX: { d: number; at: number; o: Box } | undefined, bestY: { d: number; at: number; o: Box } | undefined;
+    for (const o of d.snap.others) {
+      for (const ox of [o.x, o.x + o.w / 2, o.x + o.w]) for (const mx of xs) { const dd = ox - mx; if (Math.abs(dd) < tol && (!bestX || Math.abs(dd) < Math.abs(bestX.d))) bestX = { d: dd, at: ox, o }; }
+      for (const oy of [o.y, o.y + o.h / 2, o.y + o.h]) for (const my of ys) { const dd = oy - my; if (Math.abs(dd) < tol && (!bestY || Math.abs(dd) < Math.abs(bestY.d))) bestY = { d: dd, at: oy, o }; }
+    }
+    const fx = dx + (bestX?.d ?? 0), fy = dy + (bestY?.d ?? 0);
+    const nb = { ...d.snap.box, x: d.snap.box.x + fx, y: d.snap.box.y + fy };
+    const g: { x?: number; y?: number; from: number; to: number }[] = [];
+    if (bestX) g.push({ x: bestX.at, from: Math.min(nb.y, bestX.o.y) - 12, to: Math.max(nb.y + nb.h, bestX.o.y + bestX.o.h) + 12 });
+    if (bestY) g.push({ y: bestY.at, from: Math.min(nb.x, bestY.o.x) - 12, to: Math.max(nb.x + nb.w, bestY.o.x + bestY.o.w) + 12 });
+    setGuides(g);
+    return [Math.round(fx), Math.round(fy)];
   };
 
   const onMove = (e: RPE) => {
@@ -181,7 +210,11 @@ export function Canvas(p: Props) {
     if (!d.moved) { d.moved = true; p.setDragging(true); }
     const k = p.view.k;
     if (d.kind === "pan") p.setView((v) => ({ ...v, x: d.vx + dx, y: d.vy + dy }));
-    else if (d.kind === "move") p.onMoveSel(Math.round(dx / k), Math.round(dy / k), false);
+    else if (d.kind === "move") {
+      const [sx, sy] = snapped(d, dx / k, dy / k, e.altKey);
+      d.last = [sx, sy];
+      p.onMoveSel(sx, sy, false);
+    }
     else if (d.kind === "resize") p.onResize(d.key!, d.from!, resized(d, dx / k, dy / k), false);
     else if (d.kind === "bend") p.onBend(d.edge!, [Math.round(d.bend0![0] + dx / k), Math.round(d.bend0![1] + dy / k)], false);
     else if (d.kind === "marquee") setMarquee({ x: Math.min(d.wx, w.x), y: Math.min(d.wy, w.y), w: Math.abs(w.x - d.wx), h: Math.abs(w.y - d.wy) });
@@ -226,7 +259,8 @@ export function Canvas(p: Props) {
     }
     p.setDragging(false);
     const dx = e.clientX - d.sx, dy = e.clientY - d.sy, k = p.view.k;
-    if (d.kind === "move") p.onMoveSel(Math.round(dx / k), Math.round(dy / k), true);
+    setGuides([]);
+    if (d.kind === "move") { const [sx, sy] = d.last ?? [Math.round(dx / k), Math.round(dy / k)]; p.onMoveSel(sx, sy, true); }
     else if (d.kind === "resize") p.onResize(d.key!, d.from!, resized(d, dx / k, dy / k), true);
     else if (d.kind === "bend") p.onBend(d.edge!, [Math.round(d.bend0![0] + dx / k), Math.round(d.bend0![1] + dy / k)], true);
     else if (d.kind === "draw") p.onDraw(p.tool, d.points!, true);
@@ -283,6 +317,9 @@ export function Canvas(p: Props) {
       <div className="world" style={{ transform: `translate(${p.view.x}px, ${p.view.y}px) scale(${k})` }}>
         <svg className="board" width={1} height={1} overflow="visible">
           <BoardArt doc={p.doc} L={p.L} o={{ cards: p.cards, cardHref: p.cardHref, wobble: !p.dragging, uid: "ed", highlightEdge: selEdge ? Number(selEdge.slice(5)) : undefined, hide: ed?.key.startsWith("node:") && p.L.nodes[ed.key.slice(5)]?.type !== "card" ? new Set([ed.key.slice(5)]) : undefined }} />
+          {guides.map((g, i) => g.x !== undefined
+            ? <line key={i} x1={g.x} x2={g.x} y1={g.from} y2={g.to} stroke="#e8590c" strokeWidth={1.5 / p.view.k} strokeDasharray={`${5 / p.view.k} ${4 / p.view.k}`} pointerEvents="none" />
+            : <line key={i} y1={g.y} y2={g.y} x1={g.from} x2={g.to} stroke="#e8590c" strokeWidth={1.5 / p.view.k} strokeDasharray={`${5 / p.view.k} ${4 / p.view.k}`} pointerEvents="none" />)}
           {wire ? (() => {
             const a = p.L.nodes[wire.from];
             if (!a) return null;
@@ -297,7 +334,7 @@ export function Canvas(p: Props) {
           const b = boxOf(p.doc, p.L, s);
           if (!b || (ed && ed.key === s)) return null;
           return (
-            <div key={s} className={`sel-box${s.startsWith("frame:") ? " frame" : ""}`} style={{ left: b.x - 3 / k, top: b.y - 3 / k, width: b.w + 6 / k, height: b.h + 6 / k, borderWidth: bw * 1.25 }}>
+            <div key={s} className={`sel-box${s.startsWith("frame:") ? " frame" : ""}${lockedKey(p.doc, s) ? " locked" : ""}`} title={lockedKey(p.doc, s) ? "Locked: Shift+Cmd+L unlocks" : undefined} style={{ left: b.x - 3 / k, top: b.y - 3 / k, width: b.w + 6 / k, height: b.h + 6 / k, borderWidth: bw * 1.25 }}>
               {s === single && singleBox ? handles.map((h) => <span key={h} className={`handle h-${h}`} data-handle={h} style={{ width: 11 / k, height: 11 / k, borderWidth: 2 / k }} />) : null}
             </div>
           );

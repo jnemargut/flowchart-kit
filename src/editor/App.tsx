@@ -5,7 +5,7 @@ import { shapeBox } from "../../vendor/sketch/shapes";
 import type { Result } from "../../vendor/sketch/suggest";
 import { TOOL_KEYS, Tools, type DrawTool } from "../../vendor/sketch/tools";
 import { fitView, type View } from "../../vendor/sketch/view";
-import { center, frameAt, homeFrame, layoutBoard, slides, type BoardLayout, type Box } from "../layout";
+import { center, frameAt, homeFrame, layoutBoard, slides, type BoardLayout, type Box, shapeBounds } from "../layout";
 import { textWidth } from "../text";
 import { isNote, typeOf, type Cards, type FlowchartFile, type FNode, type Side4 } from "../types";
 import { validate } from "../validate";
@@ -32,6 +32,7 @@ export function App() {
   const [dragging, setDragging] = useState(false);
   const [play, setPlay] = useState<string | null>(null);
   // the properties panel can be put away for more canvas; remembered per browser
+  const [styleClip, setStyleClip] = useState<M.StyleClip | null>(null);
   const [props, setPropsRaw] = useState(() => { try { return localStorage.getItem("props-panel") !== "hidden"; } catch { return true; } });
   const setProps = (on: boolean) => { setPropsRaw(on); try { localStorage.setItem("props-panel", on ? "shown" : "hidden"); } catch { /* private window: fine */ } };
   const [palette, setPalette] = useState(true);
@@ -48,6 +49,7 @@ export function App() {
   const [cropping, setCropping] = useState<string | null>(null);
   const undo = useRef<FlowchartFile[]>([]);
   const redo = useRef<FlowchartFile[]>([]);
+  const lostSel = useRef<M.Key[]>([]);
   const lastCo = useRef<string | undefined>(undefined);
   const saveT = useRef<number | undefined>(undefined);
   const latest = useRef<FlowchartFile | null>(null);
@@ -110,7 +112,7 @@ export function App() {
     if (!doc || raw === doc) return;
     // once you edit by hand, what's on the board stays put: nothing reshuffles because of a small change
     const next = o.pin === false || !base ? raw : M.pinAll(doc, base, raw);
-    if (coalesce === undefined || coalesce !== lastCo.current) { undo.current.push(doc); if (undo.current.length > 200) undo.current.shift(); redo.current = []; }
+    if (coalesce === undefined || coalesce !== lastCo.current) { undo.current.push(doc); if (undo.current.length > 200) undo.current.shift(); redo.current = []; lostSel.current = []; }
     lastCo.current = coalesce;
     setDoc(next);
     setResult(validate(next));
@@ -122,7 +124,13 @@ export function App() {
     to.current.push(doc);
     lastCo.current = undefined;
     setDoc(prev); setResult(validate(prev)); save(prev, true);
-    setSel((s) => s.filter((k) => exists(prev, k)));
+    // what undo took out of the selection comes back selected on redo
+    setSel((s) => {
+      const keep = s.filter((k) => exists(prev, k));
+      const back = lostSel.current.filter((k) => exists(prev, k) && !keep.includes(k));
+      lostSel.current = s.filter((k) => !keep.includes(k));
+      return [...keep, ...back];
+    });
   };
   const exists = (d: FlowchartFile, k: M.Key) => {
     const [kind, id, i] = k.split(":");
@@ -264,6 +272,82 @@ export function App() {
     crop: (id) => setCropping(id),
     set: (path, value, co) => doc && edit(M.setAt(doc, path, value), co),
     select: setSel,
+    align: (how) => {
+      if (!doc || !base) return;
+      const items = sel.filter((k) => !k.startsWith("edge:") && !isLocked(k)).map((k) => ({ k, b: boxOf(doc, base, k) })).filter((x): x is { k: M.Key; b: Box } => !!x.b);
+      if (items.length < 2) return;
+      const L0 = Math.min(...items.map((x) => x.b.x)), R0 = Math.max(...items.map((x) => x.b.x + x.b.w));
+      const T0 = Math.min(...items.map((x) => x.b.y)), B0 = Math.max(...items.map((x) => x.b.y + x.b.h));
+      const moves = items.map(({ k, b }) => {
+        if (how === "left") return { k, dx: L0 - b.x, dy: 0 };
+        if (how === "right") return { k, dx: R0 - (b.x + b.w), dy: 0 };
+        if (how === "center") return { k, dx: (L0 + R0) / 2 - (b.x + b.w / 2), dy: 0 };
+        if (how === "top") return { k, dx: 0, dy: T0 - b.y };
+        if (how === "bottom") return { k, dx: 0, dy: B0 - (b.y + b.h) };
+        return { k, dx: 0, dy: (T0 + B0) / 2 - (b.y + b.h / 2) };
+      });
+      edit(M.moveEach(doc, base, moves));
+    },
+    distribute: (axis) => {
+      if (!doc || !base) return;
+      const items = sel.filter((k) => !k.startsWith("edge:") && !isLocked(k)).map((k) => ({ k, b: boxOf(doc, base, k) })).filter((x): x is { k: M.Key; b: Box } => !!x.b);
+      if (items.length < 3) return;
+      const pos = (b: Box) => (axis === "across" ? b.x : b.y), size = (b: Box) => (axis === "across" ? b.w : b.h);
+      items.sort((p, q) => pos(p.b) - pos(q.b));
+      const first = items[0].b, last = items[items.length - 1].b;
+      const span = pos(last) + size(last) - pos(first), total = items.reduce((t, x) => t + size(x.b), 0);
+      const gap = (span - total) / (items.length - 1);
+      let at = pos(first);
+      const moves = items.map(({ k, b }) => { const m = { k, dx: axis === "across" ? at - b.x : 0, dy: axis === "down" ? at - b.y : 0 }; at += size(b) + gap; return m; });
+      edit(M.moveEach(doc, base, moves));
+    },
+    group: () => {
+      if (!doc) return;
+      const keys = sel.filter((k) => k.startsWith("node:") || k.startsWith("shape:"));
+      if (keys.length < 2) return;
+      const used = new Set(M.allKeys(doc).map((k) => M.groupOf(doc, k)));
+      let n = 1; while (used.has(`g${n}`)) n++;
+      let d = doc;
+      for (const k of keys) d = M.setAt(d, [...M.propPath(k), "group"], `g${n}`);
+      edit(d);
+      flash("Grouped. Click any of them to pick up the lot. Shift+Cmd+G ungroups.");
+    },
+    ungroup: () => {
+      if (!doc) return;
+      let d = doc;
+      for (const k of sel) if (M.groupOf(d, k)) d = M.setAt(d, [...M.propPath(k), "group"], undefined);
+      edit(d);
+    },
+    lock: () => {
+      if (!doc) return;
+      const keys = sel.filter((k) => k.startsWith("node:") || k.startsWith("shape:"));
+      if (!keys.length) return;
+      const lockIt = !keys.every((k) => isLocked(k));
+      let d = doc;
+      for (const k of keys) d = M.setAt(d, [...M.propPath(k), "locked"], lockIt ? true : undefined);
+      edit(d);
+      flash(lockIt ? "Locked: it stays put. Shift+Cmd+L unlocks." : "Unlocked.");
+    },
+    copyStyle: () => {
+      if (!doc || !sel.length) return;
+      const st = M.styleOf(doc, sel[0]);
+      if (!st) return flash("Nothing to copy a style from here.");
+      setStyleClip(st);
+      flash("Style copied. Select something and Option+Cmd+V (or Paste style) to use it.");
+    },
+    pasteStyle: () => {
+      if (!doc || !styleClip) return;
+      let d = doc, n = 0;
+      for (const k of sel) {
+        const kind = k.split(":")[0];
+        if (kind !== styleClip.kind) continue;
+        for (const [prop, v] of Object.entries(styleClip.props)) d = M.setAt(d, [...M.propPath(k), prop], v);
+        n++;
+      }
+      if (!n) return flash(`That style is for ${styleClip.kind === "node" ? "boxes" : styleClip.kind === "edge" ? "arrows" : "drawings"}.`);
+      edit(d);
+    },
+    canPasteStyle: !!styleClip,
     remove: () => {
       if (!doc || !base || !sel.length) return;
       let d = doc;
@@ -384,6 +468,24 @@ export function App() {
   // ---- canvas callbacks
 
   /** Move everything selected. A frame carries what's in it. On release, a node dropped in another frame moves there, and a stamp sticks to what it lands on. */
+  /** Locked things stay put: no dragging, nudging or resizing until they're unlocked. */
+  const isLocked = (k: M.Key, dd: FlowchartFile | null = doc) => {
+    if (!dd) return false;
+    const [kind, id, i] = k.split(":");
+    if (kind === "node") return !!dd.nodes[id]?.locked;
+    if (kind === "shape") return !!(id ? dd.frames?.[id]?.shapes : dd.shapes)?.[Number(i)]?.locked;
+    return false;
+  };
+  /** Clicking one thing in a group picks up the whole group. */
+  const withGroups = (keys: M.Key[]): M.Key[] => {
+    if (!doc) return keys;
+    const groups = new Set(keys.map((k) => M.groupOf(doc, k)).filter(Boolean));
+    if (!groups.size) return keys;
+    const more = M.allKeys(doc).filter((k) => groups.has(M.groupOf(doc, k)));
+    return [...new Set([...keys, ...more])];
+  };
+  const selectFromCanvas = (keys: M.Key[]) => setSel(withGroups(keys));
+
   const onMoveSel = (dx: number, dy: number, commit: boolean) => {
     if (!doc || !base) return;
     let d = doc;
@@ -394,6 +496,7 @@ export function App() {
       if (b && !movedFrames.has(b.frame) && !d.canvas?.[b.frame]) d = M.freezeFrame(d, base, b.frame);
     }
     for (const k of sel) {
+      if (isLocked(k)) continue;
       const [kind, id, i] = k.split(":");
       if (kind === "frame") d = M.freezeFrame(d, base, id, dx, dy);
       else if (kind === "node" && base.nodes[id] && !movedFrames.has(base.nodes[id].frame)) d = M.nudge(d, id, dx, dy);
@@ -448,7 +551,7 @@ export function App() {
   };
 
   const onResize = (key: M.Key, from: Box, to: Box, commit: boolean) => {
-    if (!doc) return;
+    if (!doc || isLocked(key)) return;
     const [kind, id, i] = key.split(":");
     let d = doc;
     if (kind === "node") {
@@ -604,13 +707,38 @@ export function App() {
 
   const onMarkup = (frame: string, strokes: MarkupStroke[]) => { if (doc) edit(M.setAt(doc, ["markup", frame], strokes.length ? strokes : undefined)); };
 
-  type Pack = { nodes: Record<string, FNode>; links?: FlowchartFile["links"] };
+  type Pack = { nodes: Record<string, FNode>; links?: FlowchartFile["links"]; /** drawings, in board coordinates */ shapes?: SketchShape[] };
+  /** A selected drawing in board coordinates (drawings in a frame are stored frame-local). */
+  const boardShape = (k: M.Key): SketchShape | undefined => {
+    if (!doc || !base) return undefined;
+    const [, f, i] = k.split(":");
+    const sh = (f ? doc.frames?.[f]?.shapes : doc.shapes)?.[Number(i)];
+    if (!sh) return undefined;
+    const fb = f ? base.frames[f] : undefined;
+    return { ...sh, points: sh.points.map(([x, y]) => [x + (fb?.ox ?? 0), y + (fb?.oy ?? 0)] as [number, number]) };
+  };
   /** Copied things, pasted onto this board: fresh ids, into the frame under the pointer. */
   const pastePack = (pack: Pack, at: { x: number; y: number }) => {
     if (!doc || !base) return;
     let d = doc;
     const ids: Record<string, string> = {};
     const fr = frameAt(base, at.x, at.y);
+    // everything keeps its arrangement, centered where you're pointing
+    const nodeBoxes = Object.keys(pack.nodes).filter((k) => base.nodes[k]).map((k) => base.nodes[k] as Box);
+    const shapeBoxes = (pack.shapes ?? []).map((sh) => shapeBounds(sh));
+    const all = [...nodeBoxes, ...shapeBoxes];
+    const bx = all.length ? Math.min(...all.map((b) => b.x)) : at.x, by = all.length ? Math.min(...all.map((b) => b.y)) : at.y;
+    const bw = all.length ? Math.max(...all.map((b) => b.x + b.w)) - bx : 0, bh = all.length ? Math.max(...all.map((b) => b.y + b.h)) - by : 0;
+    const ddx = at.x - bw / 2 - bx, ddy = at.y - bh / 2 - by;
+    const newShapes: M.Key[] = [];
+    for (const sh of pack.shapes ?? []) {
+      const fb = fr ? base.frames[fr] : undefined;
+      const local: SketchShape = { ...sh, points: sh.points.map(([x, y]) => [Math.round(x + ddx - (fb?.ox ?? 0)), Math.round(y + ddy - (fb?.oy ?? 0))] as [number, number]) };
+      const path = fr ? ["frames", fr, "shapes"] : ["shapes"];
+      const list = (M.getAt(d, path) as SketchShape[] | undefined) ?? [];
+      d = M.setAt(d, path, [...list, local]);
+      newShapes.push(`shape:${fr ?? ""}:${list.length}`);
+    }
     for (const [old, n0] of Object.entries(pack.nodes)) {
       const n: FNode = { ...n0 };
       if (n.near && !pack.nodes[n.near]) delete n.near;
@@ -620,18 +748,15 @@ export function App() {
     }
     for (const n of Object.values(ids).map((id) => d.nodes[id])) if (n.near) n.near = ids[n.near];
     for (const l of pack.links ?? []) if (ids[l.from] && ids[l.to]) { const { from: _f, to: _t, ...rest } = l; d = M.addLink(d, ids[l.from], ids[l.to], rest); }
-    // keep their arrangement, centered where you're pointing
     const olds = Object.keys(ids).filter((k) => base.nodes[k]);
     if (olds.length) {
-      const bx = Math.min(...olds.map((k) => base.nodes[k].x)), by = Math.min(...olds.map((k) => base.nodes[k].y));
-      const bw = Math.max(...olds.map((k) => base.nodes[k].x + base.nodes[k].w)) - bx, bh = Math.max(...olds.map((k) => base.nodes[k].y + base.nodes[k].h)) - by;
-      for (const k of olds) if (!(isNote(pack.nodes[k]) && pack.nodes[k].near && ids[pack.nodes[k].near!])) d = M.placeAt(d, ids[k], at.x - bw / 2 + (base.nodes[k].x - bx), at.y - bh / 2 + (base.nodes[k].y - by), cards);
+      for (const k of olds) if (!(isNote(pack.nodes[k]) && pack.nodes[k].near && ids[pack.nodes[k].near!])) d = M.placeAt(d, ids[k], base.nodes[k].x + ddx, base.nodes[k].y + ddy, cards);
     } else {
       const first = Object.values(ids)[0];
       if (first && Object.keys(ids).length === 1) d = placeCentered(d, first, at.x, at.y);
     }
     edit(d);
-    setSel(Object.values(ids).map((id) => `node:${id}`));
+    setSel([...Object.values(ids).map((id) => `node:${id}`), ...newShapes]);
   };
 
   /** What's copied: the picture for other apps, and the things themselves for boards. */
@@ -641,7 +766,8 @@ export function App() {
     const frameIds = sel.filter((k) => k.startsWith("frame:")).map((k) => k.slice(6));
     const ids = [...new Set([...sel.filter((k) => k.startsWith("node:")).map((k) => k.slice(5)), ...Object.values(base.nodes).filter((b) => frameIds.includes(b.frame)).map((b) => b.id)])];
     const withNotes = [...new Set([...ids, ...Object.entries(doc.nodes).filter(([, n]) => n.near && ids.includes(n.near)).map(([k]) => k)])];
-    const pack: Pack = { nodes: Object.fromEntries(withNotes.map((id) => [id, doc.nodes[id]])), links: (doc.links ?? []).filter((l) => withNotes.includes(l.from) && withNotes.includes(l.to)) };
+    const shapes = sel.filter((k) => k.startsWith("shape:")).map(boardShape).filter(Boolean) as SketchShape[];
+    const pack: Pack = { nodes: Object.fromEntries(withNotes.map((id) => [id, doc.nodes[id]])), links: (doc.links ?? []).filter((l) => withNotes.includes(l.from) && withNotes.includes(l.to)), ...(shapes.length ? { shapes } : {}) };
     const boxes = [...sel.map((k) => boxOf(doc, base, k)), ...withNotes.map((id) => base.nodes[id])].filter(Boolean) as Box[];
     const x0 = Math.min(...boxes.map((b) => b.x)), y0 = Math.min(...boxes.map((b) => b.y));
     const x1 = Math.max(...boxes.map((b) => b.x + b.w)), y1 = Math.max(...boxes.map((b) => b.y + b.h));
@@ -747,7 +873,11 @@ export function App() {
       if ((e.key === "Delete" || e.key === "Backspace") && sel.length) { e.preventDefault(); a.remove(); return; }
       if (mod && e.key.toLowerCase() === "d" && sel.length) { e.preventDefault(); a.duplicate(); return; }
       if (mod && e.key.toLowerCase() === "a") { e.preventDefault(); setSel(Object.keys(doc.nodes).map((id) => `node:${id}`)); return; }
-      if (mod && (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "x") && sel.some((k) => k.startsWith("node:") || k.startsWith("frame:"))) {
+      if (mod && e.altKey && e.key.toLowerCase() === "c" && sel.length) { e.preventDefault(); a.copyStyle(); return; }
+      if (mod && e.altKey && e.key.toLowerCase() === "v" && sel.length) { e.preventDefault(); a.pasteStyle(); return; }
+      if (mod && e.key.toLowerCase() === "g" && sel.length) { e.preventDefault(); if (e.shiftKey) a.ungroup(); else a.group(); return; }
+      if (mod && e.shiftKey && e.key.toLowerCase() === "l" && sel.length) { e.preventDefault(); a.lock(); return; }
+      if (mod && (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "x") && sel.some((k) => k.startsWith("node:") || k.startsWith("frame:") || k.startsWith("shape:"))) {
         e.preventDefault();
         await copySelection(e.key.toLowerCase() === "x");
         return;
@@ -826,7 +956,7 @@ export function App() {
       <div className={`main${palette ? " with-palette" : ""}${props ? "" : " no-props"}`}>
         {palette ? <Palette onAdd={(p) => add(p)} bust={bust} onUpload={(f) => { const c = viewCenter(); onDropFile(f, Math.round(c.x), Math.round(c.y)); }} /> : null}
         <div className="canvas-wrap" ref={canvasEl}>
-          <Canvas doc={shown} L={L} cards={cards} cardHref={cardHref} view={view} setView={setView} sel={sel} onSelect={setSel} tool={tool}
+          <Canvas doc={shown} L={L} cards={cards} cardHref={cardHref} view={view} setView={setView} sel={sel} onSelect={selectFromCanvas} tool={tool}
             onMoveSel={onMoveSel} onResize={onResize} onBend={onBend} onDraw={onDraw} onTextTool={onTextTool} onConnect={onConnect} onDouble={onDouble}
             onDrop={onDrop} onDropFile={onDropFile} onPointer={(x, y) => { pointer.current = { x, y }; }}
             editing={editing} onEditDone={finishEdit} dragging={dragging} setDragging={setDragging} />

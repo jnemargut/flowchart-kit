@@ -24,6 +24,10 @@ export interface FNode {
   ref?: string;
   /** Cards: show only part of the picture, as fractions [left, top, right, bottom] (the original stays as it is). */
   crop?: [number, number, number, number];
+  /** Stays put: can't be dragged, nudged or resized until it's unlocked. */
+  locked?: boolean;
+  /** Things with the same group id are selected and moved together. */
+  group?: string;
   /** Image cards: flip the picture left to right. */
   mirror?: boolean;
   /** Image cards: turn the picture clockwise, 90, 180 or 270. */

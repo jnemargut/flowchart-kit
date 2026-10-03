@@ -201,3 +201,64 @@ export function pointer(file: string, doc: FlowchartFile, L: BoardLayout, key: K
   if (kind === "edge") { const l = doc.links?.[Number(id)]; return `In ${file}, the link from "${l?.from}" to "${l?.to}" (links[${id}]): `; }
   return `In ${file}, the drawing ${id ? `in frame "${id}" (frames.${id}.shapes[${extra}])` : `(shapes[${extra}])`}: `;
 }
+
+// ---------- arranging: several things at once, groups, locks, styles ----------
+
+/** Where a selected thing's own props live: a node, an arrow, or a drawing (in a frame or on the board). */
+export function propPath(k: Key): Path {
+  const [kind, id, i] = k.split(":");
+  if (kind === "node") return ["nodes", id];
+  if (kind === "edge") return ["links", Number(id)];
+  if (kind === "shape") return id ? ["frames", id, "shapes", Number(i)] : ["shapes", Number(i)];
+  return ["frames", id];
+}
+
+/** Every node and drawing on the board, as selection keys. */
+export function allKeys(doc: FlowchartFile): Key[] {
+  const out: Key[] = Object.keys(doc.nodes ?? {}).map((id) => `node:${id}`);
+  (doc.shapes ?? []).forEach((_, i) => out.push(`shape::${i}`));
+  for (const [f, fr] of Object.entries(doc.frames ?? {})) (fr.shapes ?? []).forEach((_, i) => out.push(`shape:${f}:${i}`));
+  return out;
+}
+
+export const groupOf = (doc: FlowchartFile, k: Key): string | undefined => {
+  const [kind] = k.split(":");
+  if (kind !== "node" && kind !== "shape") return undefined;
+  const v = getAt(doc, [...propPath(k), "group"]);
+  return typeof v === "string" ? v : undefined;
+};
+
+/** Move each thing by its own amount (align, distribute). Nodes get pinned there; drawings move their points. */
+export function moveEach(doc: FlowchartFile, L: BoardLayout, moves: { k: Key; dx: number; dy: number }[]): FlowchartFile {
+  let d = doc;
+  for (const { k, dx, dy } of moves) {
+    if (!dx && !dy) continue;
+    const [kind, id, i] = k.split(":");
+    if (kind === "node" && L.nodes[id]) {
+      if (!d.canvas?.[L.nodes[id].frame]) d = freezeFrame(d, L, L.nodes[id].frame);
+      d = nudge(d, id, Math.round(dx), Math.round(dy));
+    } else if (kind === "frame") d = freezeFrame(d, L, id, Math.round(dx), Math.round(dy));
+    else if (kind === "shape") {
+      const path = id ? ["frames", id, "shapes", Number(i), "points"] : ["shapes", Number(i), "points"];
+      const pts = getAt(d, path) as [number, number][] | undefined;
+      if (pts) d = setAt(d, path, pts.map(([x, y]) => [Math.round(x + dx), Math.round(y + dy)]));
+    }
+  }
+  return d;
+}
+
+/** The look of a thing, to paste onto others of the same kind. */
+export interface StyleClip { kind: "node" | "edge" | "shape"; props: Record<string, unknown> }
+const STYLE_PROPS: Record<StyleClip["kind"], string[]> = {
+  node: ["fill", "stroke", "weight", "size", "color"],
+  edge: ["style", "shape", "head", "color", "weight", "size"],
+  shape: ["color", "weight", "fill", "size"],
+};
+export function styleOf(doc: FlowchartFile, k: Key): StyleClip | undefined {
+  const kind = k.split(":")[0] as StyleClip["kind"];
+  if (!STYLE_PROPS[kind]) return undefined;
+  const o = getAt(doc, propPath(k)) as Record<string, unknown> | undefined;
+  if (!o) return undefined;
+  // every style prop, so pasting also clears what the source doesn't have (back to the default)
+  return { kind, props: Object.fromEntries(STYLE_PROPS[kind].map((p) => [p, o[p]])) };
+}

@@ -33,7 +33,44 @@ export interface InspectorActions {
   arrange: (to: "back" | "backward" | "forward" | "front") => void;
   /** Let the automatic layout arrange a frame (or with no frame, the whole board) again. */
   tidy: (frame?: string) => void;
+  /** Line several things up on an edge or a middle. */
+  align: (how: "left" | "center" | "right" | "top" | "middle" | "bottom") => void;
+  /** Space three or more things evenly. */
+  distribute: (axis: "across" | "down") => void;
+  group: () => void;
+  ungroup: () => void;
+  /** Lock (or unlock) so it stays put. */
+  lock: () => void;
+  copyStyle: () => void;
+  pasteStyle: () => void;
+  canPasteStyle: boolean;
 }
+
+/** Group, lock and copy/paste a look: shown for anything you can arrange. */
+function Arrange({ a, doc, sel }: { a: InspectorActions; doc: FlowchartFile; sel: Key[] }) {
+  const items = sel.filter((k) => k.startsWith("node:") || k.startsWith("shape:"));
+  const at = (k: Key) => { const [kind, id, i] = k.split(":"); return (kind === "node" ? doc.nodes[id] : (id ? doc.frames?.[id]?.shapes : doc.shapes)?.[Number(i)]) as { locked?: boolean; group?: string } | undefined; };
+  const locked = items.length > 0 && items.every((k) => at(k)?.locked);
+  const grouped = items.some((k) => at(k)?.group);
+  return (
+    <div className="actions arrange">
+      {items.length > 1 && !grouped ? <button className="btn" onClick={a.group} title="Cmd+G: pick them all up when you click any one">Group</button> : null}
+      {grouped ? <button className="btn" onClick={a.ungroup} title="Shift+Cmd+G">Ungroup</button> : null}
+      {items.length ? <button className={`btn${locked ? " on" : ""}`} aria-pressed={locked} onClick={a.lock} title="Shift+Cmd+L: stays put until you unlock it">{locked ? "Locked" : "Lock"}</button> : null}
+      {sel.length === 1 ? <button className="btn" onClick={a.copyStyle} title="Option+Cmd+C: copy its colors, line and text size">Copy style</button> : null}
+      {a.canPasteStyle ? <button className="btn" onClick={a.pasteStyle} title="Option+Cmd+V">Paste style</button> : null}
+    </div>
+  );
+}
+
+const ALIGN: [Parameters<InspectorActions["align"]>[0], string, string][] = [
+  ["left", "Align left edges", "M5 3 V21 M8 7 H19 M8 12 H15 M8 17 H18"],
+  ["center", "Align centers", "M12 3 V21 M6 7 H18 M8 12 H16 M5 17 H19"],
+  ["right", "Align right edges", "M19 3 V21 M5 7 H16 M9 12 H16 M6 17 H16"],
+  ["top", "Align tops", "M3 5 H21 M7 8 V19 M12 8 V15 M17 8 V18"],
+  ["middle", "Align middles", "M3 12 H21 M7 6 V18 M12 8 V16 M17 5 V19"],
+  ["bottom", "Align bottoms", "M3 19 H21 M7 5 V16 M12 9 V16 M17 6 V16"],
+];
 
 const Field = ({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) => <label className={`field${wide ? " wide" : ""}`}><span>{label}</span>{children}</label>;
 
@@ -120,6 +157,9 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
       <aside className="inspector">
         <h3>{sel.length} selected</h3>
         <p className="doc">Drag any of them to move them all. Shift+click adds or removes one.</p>
+        <Field label="Align" wide><span className="seg icons full">{ALIGN.map(([how, title, d]) => <button key={how} title={title} aria-label={title} onClick={() => a.align(how)}><svg viewBox="0 0 24 24" width={18} height={18}><path d={d} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" /></svg></button>)}</span></Field>
+        {sel.filter((k) => !k.startsWith("edge:")).length > 2 ? <Field label="Space evenly" wide><span className="seg full"><button onClick={() => a.distribute("across")}>Across</button><button onClick={() => a.distribute("down")}>Down</button></span></Field> : null}
+        <Arrange a={a} doc={doc} sel={sel} />
         <Actions a={a} pointer={false}>{nodes.length ? <button className="btn" onClick={a.wrapInFrame}>Put in a new frame</button> : null}</Actions>
       </aside>
     );
@@ -148,6 +188,7 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
           </Field>
         ) : null}
         {isFlow ? <label className="field inline"><span>The product shows up here (teal)</span><input type="checkbox" checked={!!n.product} onChange={(e) => a.set(P("product"), e.target.checked || undefined)} /></label> : null}
+        {t === "sticky" ? <Field label="Text size" wide><Seg value={n.size ?? "m"} options={TEXT_SIZES} labels={TEXT_SIZE_LABEL} onChange={(v) => a.set(P("size"), v === "m" ? undefined : v)} /></Field> : null}
         {t === "sticky" ? (
           <Field label="Color">
             <span className="swatches">{STICKY_COLORS.map((c) => <button key={c} className={(n.color ?? "yellow") === c ? "on" : ""} title={`${c}: ${STICKY[c].doc}`} aria-label={c} onClick={() => a.set(P("color"), c === "yellow" ? undefined : c)}><span className="dot square" style={{ background: STICKY[c].fill }} /></button>)}<AnyColor square value={n.color} onPick={(h) => a.set(P("color"), h)} title="Any paper color" /></span>
@@ -186,7 +227,8 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
         {ins.map(({ l, i }) => <div key={`in${i}`} className="item-row"><span className="to muted">← {plainText(doc.nodes[l.from]?.text ?? l.from)}{l.label ? ` (${l.label})` : ""}</span><button className="x" title="Remove this arrow" aria-label="Remove this arrow" onClick={() => a.set(["links", i], undefined)}>×</button></div>)}
         {isFlow ? <p className="hint">Tab adds the next step, Enter a sibling. Drag a dot on the edge to connect.</p> : null}
         <Layer a={a} />
-        <Rename id={id} label="Id" onRename={(to) => a.renameNode(id, to)} />
+        <Arrange a={a} doc={doc} sel={sel} />
+        <Rename key={id} id={id} label="Id" onRename={(to) => a.renameNode(id, to)} />
         <Actions a={a}>
           {t === "card" && !n.ref ? <button className="btn dark" onClick={() => a.chooseImage(id)}>Choose image…</button> : null}
           {t === "card" && card?.png ? <button className="btn" onClick={() => a.crop(id)} title="Show only part of the picture">{n.crop ? "Change crop…" : "Crop…"}</button> : null}
@@ -225,7 +267,7 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
         </Field>
         {doc.canvas?.[id] ? <p className="hint">You placed this frame yourself. <button className="linkish" onClick={() => a.set(["canvas", id], undefined)}>Let it find its own spot</button></p> : null}
         <label className="field inline"><span>A slide in Play</span><input type="checkbox" checked={inDeck} onChange={(e) => a.setPresent(e.target.checked ? [...order, id] : order.filter((x) => x !== id))} /></label>
-        <Rename id={id} label="Id" onRename={(to) => a.renameFrame(id, to)} />
+        <Rename key={id} id={id} label="Id" onRename={(to) => a.renameFrame(id, to)} />
         <Actions a={a} dup={false} del="Delete frame" delTitle="Deletes the frame and everything in it">
           <button className="btn dark" onClick={() => a.play(id)}>Present from here</button>
           <button className="btn" onClick={() => a.tidy(id)} title="Lay this frame's flow out automatically again (undo brings your arrangement back)">Tidy up</button>
@@ -255,6 +297,7 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
         <Field label="Weight" wide><Seg value={l.weight ?? "normal"} options={WEIGHTS} labels={WEIGHT_LABEL} onChange={(v) => a.set(["links", i, "weight"], v === "normal" ? undefined : v)} /></Field>
         {l.fromSide || l.toSide ? <p className="hint">Pinned to the {l.fromSide ?? "auto"} side of one box and the {l.toSide ?? "auto"} side of the other. <button className="linkish" onClick={() => { a.set(["links", i], { ...l, fromSide: undefined, toSide: undefined }); }}>Let it pick</button></p> : <p className="hint">To pin which sides it uses, drag from a box's dot onto one of the other box's dots.</p>}
         {l.bend ? <p className="hint">Pulled out of the way by its middle handle. <button className="linkish" onClick={() => a.set(["links", i, "bend"], undefined)}>Straighten it</button></p> : <p className="hint">Drag the round handle in the middle of the arrow to route it around things.</p>}
+        <Arrange a={a} doc={doc} sel={sel} />
         <Actions a={a} dup={false}><button className="btn" onClick={() => a.reverseLink(i)}>Flip direction</button></Actions>
       </aside>
     );
@@ -268,12 +311,18 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
         <h3>Drawing<small>{s.type}</small></h3>
         {s.type === "text" ? <Field label="Words" wide><Text area value={s.text ?? ""} focusKey={focusText} onChange={(v) => a.set([...path, "text"], v, `stext:${key}`)} /></Field> : null}
         {s.type === "text" ? <Field label="Text size" wide><Seg value={s.size ?? "m"} options={TEXT_SIZES} labels={TEXT_SIZE_LABEL} onChange={(v) => a.set([...path, "size"], v === "m" ? undefined : v)} /></Field> : null}
-        <Field label="Color"><span className="swatches">{COLORS.map((c) => <button key={c} title={c} aria-label={c} className={(s.color ?? "ink") === c ? "on" : ""} onClick={() => a.set([...path, "color"], c === "ink" ? undefined : c)}><span className="dot" style={{ background: MARKER[c] }} /></button>)}<AnyColor value={s.color} onPick={(h) => a.set([...path, "color"], h)} /></span></Field>
-        {s.type !== "text" ? <Field label="Line" wide><Seg value={s.weight ?? "normal"} options={WEIGHTS} labels={WEIGHT_LABEL} onChange={(v) => a.set([...path, "weight"], v === "normal" ? undefined : v)} /></Field> : null}
+        <Field label="Color" wide><span className="swatches">{COLORS.map((c) => <button key={c} title={c} aria-label={c} className={(s.color ?? "ink") === c ? "on" : ""} onClick={() => a.set([...path, "color"], c === "ink" ? undefined : c)}><span className="dot" style={{ background: MARKER[c] }} /></button>)}<AnyColor value={s.color} onPick={(h) => a.set([...path, "color"], h)} /></span></Field>
+        {s.type !== "text" ? <Field label="Line" wide><Seg value={s.color === "none" ? "none" : s.weight ?? "normal"} options={[...WEIGHTS, ...(s.type === "line" || s.type === "arrow" ? [] : ["none" as const])]} labels={{ ...WEIGHT_LABEL, none: "None" }} onChange={(v) => {
+          // "None" leaves the outline off (a filled shape with no line); picking a weight brings it back
+          if (v === "none") return a.set([...path, "color"], "none");
+          a.set([...path], { ...s, weight: v === "normal" ? undefined : v, color: s.color === "none" ? undefined : s.color });
+        }} /></Field> : null}
+        <Field label="Turn" wide><span className="seg full"><button onClick={() => a.set([...path, "rotate"], ((((s.rotate ?? 0) - 15) % 360) + 360) % 360 || undefined)} title="15° counterclockwise">↺ 15°</button><button onClick={() => a.set([...path, "rotate"], ((s.rotate ?? 0) + 15) % 360 || undefined)} title="15° clockwise">↻ 15°</button>{s.rotate ? <button onClick={() => a.set([...path, "rotate"], undefined)} title="Back to straight">Straight</button> : null}</span></Field>
         {s.type === "rect" || s.type === "ellipse" || s.type === "path" ? (
-          <Field label="Fill"><span className="seg">{(["none", "light", "mid", "dark"] as const).map((f) => <button key={f} className={(s.fill ?? "none") === f ? "on" : ""} onClick={() => a.set([...path, "fill"], f === "none" ? undefined : f)}>{f}</button>)}</span></Field>
+          <Field label="Fill" wide><span className="seg full">{(["none", "light", "mid", "dark", "white"] as const).map((f) => <button key={f} className={(s.fill ?? "none") === f ? "on" : ""} onClick={() => a.set([...path, "fill"], f === "none" ? undefined : f)}>{f}</button>)}</span></Field>
         ) : null}
         <Layer a={a} />
+        <Arrange a={a} doc={doc} sel={sel} />
         <p className="hint">{id ? `Drawn in "${doc.frames?.[id]?.title ?? id}", so it moves with the frame.` : "Drawn on the board, outside any frame."} {(s as { front?: boolean }).front ? "It's in front of the boxes and cards." : "It's behind the boxes and cards; To front puts it on top."}</p>
         <Actions a={a} />
       </aside>
