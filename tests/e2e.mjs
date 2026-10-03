@@ -246,6 +246,21 @@ await page.locator(".inspector button", { hasText: /^None$/ }).click();
 await until(() => read().links[edgeIdx]?.shape === "angled" && read().links[edgeIdx]?.style === "dotted" && read().links[edgeIdx]?.head === "none");
 ok("an arrow can be angled, dotted and headless", read().links[edgeIdx]?.shape === "angled" && read().links[edgeIdx]?.style === "dotted" && read().links[edgeIdx]?.head === "none", JSON.stringify(read().links[edgeIdx]));
 
+// pull the selected arrow out of the way by its middle handle, then double-click the handle to straighten it
+{
+  const hb = await page.locator(".bend-handle").boundingBox();
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+  await page.mouse.down();
+  for (let k = 1; k <= 8; k++) await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2 + k * 10, { steps: 2 });
+  await page.mouse.up();
+  await until(() => Array.isArray(read().links[edgeIdx]?.bend));
+  ok("dragging an arrow's middle handle bends it", Array.isArray(read().links[edgeIdx]?.bend) && read().links[edgeIdx].bend[1] > 0, JSON.stringify(read().links[edgeIdx]));
+  const hb2 = await page.locator(".bend-handle").boundingBox();
+  await page.mouse.dblclick(hb2.x + hb2.width / 2, hb2.y + hb2.height / 2);
+  await until(() => !read().links[edgeIdx]?.bend);
+  ok("double-clicking the handle straightens it", !read().links[edgeIdx]?.bend);
+}
+
 // connect onto a particular dot: that side is kept
 await page.keyboard.press("Escape");
 const ord = await at("order");

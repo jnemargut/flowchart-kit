@@ -14,7 +14,7 @@ export type { Result };
 const NODE_KEYS = ["type", "text", "frame", "color", "near", "icon", "at", "ref", "url", "sketch", "crop", "product", "size", "fill", "stroke", "weight"];
 const FRAME_KEYS = ["title", "near", "dir", "notes", "url", "shapes", "size"];
 const okUrl = (u: unknown) => typeof u === "string" && /^(https?:\/\/|mailto:|figma:|file:|\.{0,2}\/)\S+$/i.test(u.trim());
-const LINK_KEYS = ["from", "to", "label", "style", "shape", "head", "color", "weight", "fromSide", "toSide"];
+const LINK_KEYS = ["from", "to", "label", "style", "shape", "head", "color", "weight", "fromSide", "toSide", "bend"];
 /** One of a fixed set, with a "did you mean". */
 const pick = (err: (p: string, m: string, h?: string) => void, path: string, v: unknown, options: readonly string[], what: string, hex = false) => {
   if (v === undefined || (hex && isHex(v))) return;
@@ -107,6 +107,7 @@ export function validate(doc: FlowchartFile): Result {
     const p = `links[${i}]`;
     if (!l || typeof l !== "object") { err(p, "A link should be an object.", '{ "from": "a", "to": "b" }'); return; }
     unknownKeys(l, LINK_KEYS, p);
+    if (l.bend !== undefined && !(Array.isArray(l.bend) && l.bend.length === 2 && l.bend.every((v) => typeof v === "number" && isFinite(v)))) err(`${p}.bend`, "must be [dx, dy]: how far to pull the arrow's middle.", "The editor writes it when you drag an arrow's middle handle; leave it out otherwise.");
     for (const end of ["from", "to"] as const) {
       if (!l[end]) err(`${p}.${end}`, `A link needs "${end}".`);
       else if (!doc.nodes[l[end]]) { const s = suggest(l[end], ids); err(`${p}.${end}`, `There's no node "${l[end]}".`, s ? `Did you mean "${s}"?` : undefined); }

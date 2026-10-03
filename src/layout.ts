@@ -159,23 +159,91 @@ function elbow(s: [number, number], e: [number, number], sa: SideName, sb: SideN
   else if (!hs && !he) { const my = (s1[1] + e1[1]) / 2; mids = [[s1[0], my], [e1[0], my]]; }
   else if (hs) mids = [[e1[0], s1[1]]];
   else mids = [[s1[0], e1[1]]];
-  const pts = [s, s1, ...mids, e1, e].filter((p, i, a) => !i || Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) > 0.5);
+  const pts = cleanPts([s, s1, ...mids, e1, e]);
+  const d = roundedPath(pts);
+  const last = pts[pts.length - 1], prev = pts[pts.length - 2];
+  // label on the middle of the longest run
+  let best = 0, mid: [number, number] = [(s[0] + e[0]) / 2, (s[1] + e[1]) / 2];
+  for (let i = 1; i < pts.length; i++) { const L = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (L > best) { best = L; mid = [(pts[i][0] + pts[i - 1][0]) / 2, (pts[i][1] + pts[i - 1][1]) / 2]; } }
+  return { d, start: s, startAngle: Math.atan2(s[1] - pts[1][1], s[0] - pts[1][0]), end: e, angle: Math.atan2(last[1] - prev[1], last[0] - prev[0]), mid, sides: [sa, sb] as [SideName, SideName] };
+}
+
+/** Drop repeated points and middle points of straight runs. */
+function cleanPts(raw: [number, number][]): [number, number][] {
+  const pts = raw.filter((p, i, a) => !i || Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) > 0.5);
+  return pts.filter((p, i) => {
+    if (i === 0 || i === pts.length - 1) return true;
+    const [a, b] = [pts[i - 1], pts[i + 1]];
+    return Math.abs((p[0] - a[0]) * (b[1] - a[1]) - (p[1] - a[1]) * (b[0] - a[0])) > 0.5;
+  });
+}
+
+/** A polyline with softly rounded corners. */
+function roundedPath(pts: [number, number][], radius = 10): string {
   const r = (v: number) => Math.round(v * 10) / 10;
   let d = `M${r(pts[0][0])} ${r(pts[0][1])}`;
   for (let i = 1; i < pts.length - 1; i++) {
     const [p0, p1, p2] = [pts[i - 1], pts[i], pts[i + 1]];
     const l1 = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]), l2 = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
-    const rad = Math.min(10, l1 / 2, l2 / 2);
+    const rad = Math.min(radius, l1 / 2, l2 / 2);
     const a: [number, number] = [p1[0] + ((p0[0] - p1[0]) / (l1 || 1)) * rad, p1[1] + ((p0[1] - p1[1]) / (l1 || 1)) * rad];
     const b: [number, number] = [p1[0] + ((p2[0] - p1[0]) / (l2 || 1)) * rad, p1[1] + ((p2[1] - p1[1]) / (l2 || 1)) * rad];
     d += ` L${r(a[0])} ${r(a[1])} Q${r(p1[0])} ${r(p1[1])} ${r(b[0])} ${r(b[1])}`;
   }
-  const last = pts[pts.length - 1], prev = pts[pts.length - 2];
-  d += ` L${r(last[0])} ${r(last[1])}`;
-  // label on the middle of the longest run
-  let best = 0, mid: [number, number] = [(s[0] + e[0]) / 2, (s[1] + e[1]) / 2];
-  for (let i = 1; i < pts.length; i++) { const L = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (L > best) { best = L; mid = [(pts[i][0] + pts[i - 1][0]) / 2, (pts[i][1] + pts[i - 1][1]) / 2]; } }
-  return { d, start: s, startAngle: Math.atan2(s[1] - pts[1][1], s[0] - pts[1][0]), end: e, angle: Math.atan2(last[1] - prev[1], last[0] - prev[0]), mid, sides: [sa, sb] as [SideName, SideName] };
+  const last = pts[pts.length - 1];
+  return d + ` L${r(last[0])} ${r(last[1])}`;
+}
+
+/**
+ * An arrow the designer pulled by its middle: it leaves and arrives on the sides facing the pulled point and runs
+ * through it, in the arrow's own connector shape (curved, angled or straight).
+ */
+function bendEdge(e: Edge, l: LinkLike & { bend: [number, number] }, a: NodeBox, b: NodeBox, shape: "curved" | "angled" | "straight"): Edge {
+  const V: [number, number] = [e.lx + l.bend[0], e.ly + l.bend[1]];
+  const sa = l.fromSide ?? sideAt(a, V), sb = l.toSide ?? sideAt(b, V);
+  const s = portPoint(a, sa), t = portPoint(b, sb);
+  const r = (v: number) => Math.round(v * 10) / 10;
+  const out = (d: string, startFrom: [number, number], endFrom: [number, number]): Edge => ({
+    ...e, d, start: s, end: t, startAngle: Math.atan2(s[1] - startFrom[1], s[0] - startFrom[0]), angle: Math.atan2(t[1] - endFrom[1], t[0] - endFrom[0]), lx: V[0], ly: V[1],
+  });
+  if (shape === "straight") return out(roundedPath(cleanPts([s, V, t]), 18), V, V);
+  if (shape === "angled") {
+    const g = 22;
+    const s1: [number, number] = [s[0] + NORMAL[sa][0] * g, s[1] + NORMAL[sa][1] * g];
+    const t1: [number, number] = [t[0] + NORMAL[sb][0] * g, t[1] + NORMAL[sb][1] * g];
+    const hs = sa === "left" || sa === "right", ht = sb === "left" || sb === "right";
+    const clamp = (v: number, a1: number, a2: number) => Math.max(Math.min(a1, a2), Math.min(Math.max(a1, a2), v));
+    let pts: [number, number][], H: [number, number];
+    const between = (v: number, a1: number, a2: number) => v > Math.min(a1, a2) && v < Math.max(a1, a2);
+    // both ends on top/bottom (or both on the sides): the run you pulled moves. Pulled between the two ends, it's the
+    // run that crosses from one to the other; pulled past them (below both, say), the arrow dips out to meet it.
+    const vertRun = (): [number, number][] => [s, s1, [V[0], s1[1]], [V[0], t1[1]], t1, t];
+    const horizRun = (): [number, number][] => [s, s1, [s1[0], V[1]], [t1[0], V[1]], t1, t];
+    if (!hs && !ht) {
+      if (between(V[1], s1[1], t1[1])) { H = [V[0], clamp(V[1], s1[1], t1[1])]; pts = vertRun(); }
+      else { H = [clamp(V[0], s1[0], t1[0]), V[1]]; pts = horizRun(); }
+    } else if (hs && ht) {
+      if (between(V[0], s1[0], t1[0])) { H = [clamp(V[0], s1[0], t1[0]), V[1]]; pts = horizRun(); }
+      else { H = [V[0], clamp(V[1], s1[1], t1[1])]; pts = vertRun(); }
+    } else {
+      // one side across, the other up/down: one corner at the pulled point
+      H = V;
+      pts = hs ? [s, s1, [V[0], s1[1]], V, [t1[0], V[1]], t1, t] : [s, s1, [s1[0], V[1]], V, [V[0], t1[1]], t1, t];
+    }
+    pts = cleanPts(pts);
+    return { ...out(roundedPath(pts), pts[1], pts[pts.length - 2]), lx: H[0], ly: H[1] };
+  }
+  // curved: out along each side's normal, through the pulled point heading from one end toward the other
+  const L1 = Math.hypot(V[0] - s[0], V[1] - s[1]), L2 = Math.hypot(t[0] - V[0], t[1] - V[1]);
+  const tx = t[0] - s[0], ty = t[1] - s[1], tl = Math.hypot(tx, ty) || 1;
+  const k1 = L1 * 0.4, k2 = L2 * 0.4;
+  const ca = Math.min(Math.max(28, L1 * 0.45), 160), cb = Math.min(Math.max(28, L2 * 0.45), 160);
+  const p1: [number, number] = [s[0] + NORMAL[sa][0] * ca, s[1] + NORMAL[sa][1] * ca];
+  const p2: [number, number] = [V[0] - (tx / tl) * k1, V[1] - (ty / tl) * k1];
+  const p3: [number, number] = [V[0] + (tx / tl) * k2, V[1] + (ty / tl) * k2];
+  const p4: [number, number] = [t[0] + NORMAL[sb][0] * cb, t[1] + NORMAL[sb][1] * cb];
+  const d = `M${r(s[0])} ${r(s[1])} C${r(p1[0])} ${r(p1[1])} ${r(p2[0])} ${r(p2[1])} ${r(V[0])} ${r(V[1])} C${r(p3[0])} ${r(p3[1])} ${r(p4[0])} ${r(p4[1])} ${r(t[0])} ${r(t[1])}`;
+  return out(d, p1, p4);
 }
 
 /** A polyline from dagre, rounded through its midpoints. */
@@ -344,7 +412,7 @@ export function shapeBounds(s: SketchShape): Box {
   return { x: b.x - w / 2, y: b.y - h / 2, w, h };
 }
 
-type LinkLike = { from: string; to: string; label?: string; style?: string; head?: string; color?: string; weight?: string; fromSide?: SideName; toSide?: SideName; shape?: "curved" | "angled" | "straight" };
+type LinkLike = { from: string; to: string; label?: string; style?: string; head?: string; color?: string; weight?: string; fromSide?: SideName; toSide?: SideName; shape?: "curved" | "angled" | "straight"; bend?: [number, number] };
 const looks = (l: LinkLike) => ({ style: (l.style === "dashed" || l.style === "dotted" ? l.style : "solid") as Edge["style"], head: (["start", "both", "none"].includes(l.head ?? "") ? l.head : "end") as Edge["head"], color: l.color, weight: l.weight });
 
 function edgeFor(i: number, l: LinkLike, a: NodeBox, b: NodeBox, pts?: [number, number][], lab?: [number, number], busy?: [Set<SideName>, Set<SideName>], o: RouteOpts = {}): Edge {
@@ -531,10 +599,23 @@ export function layoutBoard(doc: FlowchartFile, cards: Cards = {}): BoardLayout 
   });
   edges.sort((a, b) => a.i - b.i);
   const fanned = fanOut(doc, nodes, edges);
-  edges.splice(0, edges.length, ...fanned);
+  // arrows the designer pulled out of the way by their middle
+  const bent = fanned.map((e) => {
+    const l = doc.links?.[e.i];
+    const a = nodes[e.from], b = nodes[e.to];
+    if (!l || !a || !b || !Array.isArray(l.bend) || l.bend.length !== 2 || !l.bend.every((v) => typeof v === "number" && isFinite(v))) return e;
+    return bendEdge(e, { ...l, bend: l.bend } as LinkLike & { bend: [number, number] }, a, b, l.shape ?? doc.connectors ?? "curved");
+  });
+  edges.splice(0, edges.length, ...bent);
+  // a pulled arrow can run outside everything else: keep the board big enough to show it
+  const bentBoxes = bent.filter((e) => Array.isArray(doc.links?.[e.i]?.bend)).flatMap((e) => {
+    const nums = (e.d.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
+    const xs = nums.filter((_, k) => k % 2 === 0), ys = nums.filter((_, k) => k % 2 === 1);
+    return xs.length ? [{ x: Math.min(...xs) - 24, y: Math.min(...ys) - 24, w: Math.max(...xs) - Math.min(...xs) + 48, h: Math.max(...ys) - Math.min(...ys) + 48 }] : [];
+  });
 
   const boardShapes = (doc.shapes ?? []).filter((s) => s.points?.length).map(shapeBounds);
-  const all = [...Object.values(frames).filter((f) => !f.loose || f.w), ...Object.values(nodes), ...boardShapes];
+  const all = [...Object.values(frames).filter((f) => !f.loose || f.w), ...Object.values(nodes), ...boardShapes, ...bentBoxes];
   return { nodes, frames, edges, bounds: union(all) ?? { x: 0, y: 0, w: 400, h: 300 } };
 }
 

@@ -251,6 +251,7 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
         </Field>
         <Field label="Weight" wide><Seg value={l.weight ?? "normal"} options={WEIGHTS} labels={WEIGHT_LABEL} onChange={(v) => a.set(["links", i, "weight"], v === "normal" ? undefined : v)} /></Field>
         {l.fromSide || l.toSide ? <p className="hint">Pinned to the {l.fromSide ?? "auto"} side of one box and the {l.toSide ?? "auto"} side of the other. <button className="linkish" onClick={() => { a.set(["links", i], { ...l, fromSide: undefined, toSide: undefined }); }}>Let it pick</button></p> : <p className="hint">To pin which sides it uses, drag from a box's dot onto one of the other box's dots.</p>}
+        {l.bend ? <p className="hint">Pulled out of the way by its middle handle. <button className="linkish" onClick={() => a.set(["links", i, "bend"], undefined)}>Straighten it</button></p> : <p className="hint">Drag the round handle in the middle of the arrow to route it around things.</p>}
         <Actions a={a} dup={false}><button className="btn" onClick={() => a.reverseLink(i)}>Flip direction</button></Actions>
       </aside>
     );

@@ -78,6 +78,8 @@ export interface Link {
   /** Which side of each box it leaves and arrives on. Leave out and the layout picks. */
   fromSide?: Side4;
   toSide?: Side4;
+  /** Pull the arrow's middle by [dx, dy] from where the layout puts it, to route it around things. The editor writes this when you drag the handle on a selected arrow. */
+  bend?: [number, number];
 }
 
 /**

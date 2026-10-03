@@ -197,6 +197,8 @@ button, select, input, textarea { font: inherit; color: inherit; }
 .sel-box.frame { border-style: dashed; border-radius: 16px; }
 .dot-handle { position: absolute; border-radius: 50%; background: #fff; border: solid var(--color-action, #e8590c); cursor: crosshair; z-index: 3; }
 .dot-handle:hover { background: #e8590c; }
+.bend-handle { position: absolute; border-radius: 50%; background: #fff; border: solid var(--color-ink, #1c1c1e); cursor: grab; z-index: 3; box-shadow: 0 0 0 3px rgba(255,255,255,0.8); }
+.bend-handle:hover, .bend-handle:active { background: #e8590c; border-color: #e8590c; cursor: grabbing; }
 .marquee { position: absolute; pointer-events: none; border: dashed var(--color-product); background: rgba(14, 154, 167, .06); }
 .inline-edit.center { text-align: center; }
 

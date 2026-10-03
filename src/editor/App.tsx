@@ -463,6 +463,13 @@ export function App() {
     if (commit) { setDraft(null); edit(d); } else setDraft(d);
   };
 
+  /** An arrow pulled by its middle: live while dragging, one undo step when let go. */
+  const onBend = (i: number, bend: [number, number] | undefined, commit: boolean) => {
+    if (!doc?.links?.[i]) return;
+    const d = M.setAt(doc, ["links", i, "bend"], bend && (bend[0] || bend[1]) ? bend : undefined);
+    if (commit) { setDraft(null); edit(d); } else setDraft(d);
+  };
+
   /** A new drawing goes into the frame it starts in (so it moves with it), or on the board. */
   const onDraw = (kind: DrawTool, points: [number, number][], commit: boolean) => {
     if (!doc || !base || kind === "select" || kind === "text") return;
@@ -812,7 +819,7 @@ export function App() {
         {palette ? <Palette onAdd={(p) => add(p)} bust={bust} onUpload={(f) => { const c = viewCenter(); onDropFile(f, Math.round(c.x), Math.round(c.y)); }} /> : null}
         <div className="canvas-wrap" ref={canvasEl}>
           <Canvas doc={shown} L={L} cards={cards} cardHref={cardHref} view={view} setView={setView} sel={sel} onSelect={setSel} tool={tool}
-            onMoveSel={onMoveSel} onResize={onResize} onDraw={onDraw} onTextTool={onTextTool} onConnect={onConnect} onDouble={onDouble}
+            onMoveSel={onMoveSel} onResize={onResize} onBend={onBend} onDraw={onDraw} onTextTool={onTextTool} onConnect={onConnect} onDouble={onDouble}
             onDrop={onDrop} onDropFile={onDropFile} onPointer={(x, y) => { pointer.current = { x, y }; }}
             editing={editing} onEditDone={finishEdit} dragging={dragging} setDragging={setDragging} />
           <Tools tool={tool} setTool={setTool} color={color} setColor={setColor} />

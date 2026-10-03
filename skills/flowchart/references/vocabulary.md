@@ -136,3 +136,4 @@ A storyboard, a storyboard panel, a wireframe flow or screen, or an image, point
 - `weight`: thin | normal (default) | thick
 - `fromSide`: which side it leaves from: "left" | "right" | "top" | "bottom" (default: the layout picks)
 - `toSide`: which side it arrives on (same choices)
+- `bend`: [dx, dy]: pulls the arrow's middle that far from where the layout puts it, to route around things. Editor-owned: the designer drags the arrow's middle handle. Leave it out.

@@ -143,7 +143,8 @@ what's installed.
   blue for ideas, green for what works, gray for parked.
 - **Looks, when you want them.** Text from small to huge, fills (including plain white for covering something up),
   border colors and weights. Arrows can be curved, angled or straight, solid, dashed or dotted, in any color,
-  with an arrowhead at either end, both, or neither.
+  with an arrowhead at either end, both, or neither. Arrow cutting through something? Select it and drag the
+  round handle in its middle to route it around; double-click the handle to straighten it again.
 - **Stamps.** A click cursor to drop on a screen, a star for the best idea, a smiley, a frown, thumbs up and
   down, a question mark, a flag and a dozen more. Drop one on anything and it sticks to it.
 - **Links.** Paste a URL and it's a link card (a ticket, a doc, a prototype). Any step, sticky or frame can carry

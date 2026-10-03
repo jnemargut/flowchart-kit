@@ -200,7 +200,9 @@ describe("staying put", () => {
     const d = example();
     d.links = d.links!.map((l, i) => (i === 0 ? { ...l, shape: "angled" as const, head: "both" as const } : i === 1 ? { ...l, shape: "straight" as const, head: "none" as const } : l));
     const L = layoutBoard(d);
-    expect(L.edges[0].d).toMatch(/Q/);
+    // angled: straight runs with rounded corners (or one straight run when the boxes line up), never a curve
+    expect(L.edges[0].d).not.toMatch(/C/);
+    expect(L.edges[0].d).toMatch(/^M[\d.\s-]+(L[\d.\s-]+|Q[\d.\s-]+)+$/);
     expect(L.edges[1].d).toMatch(/^M[\d.\s-]+L[\d.\s-]+$/);
     expect(L.edges[0].head).toBe("both");
     expect(L.edges[1].head).toBe("none");
@@ -251,5 +253,30 @@ describe("any color", () => {
   it("still rejects colors that are neither a name nor a hex", () => {
     const bad = { ...d, nodes: { ...d.nodes, honey: { type: "box", text: "x", fill: "#zzz" } } } as unknown as FlowchartFile;
     expect(validate(bad).errors.map((e) => e.path)).toContain("nodes.honey.fill");
+  });
+});
+
+describe("bent arrows", () => {
+  for (const shape of ["curved", "angled", "straight"] as const) {
+    it(`a ${shape} arrow pulled by its middle runs through the pulled point`, () => {
+      const d = example();
+      const L0 = layoutBoard(d);
+      const e0 = L0.edges[0];
+      d.links = d.links!.map((l, i) => (i === 0 ? { ...l, shape, bend: [0, 120] as [number, number] } : l));
+      expect(validate(d).errors).toEqual([]);
+      const e = layoutBoard(d).edges[0];
+      // the handle sits on the pulled point (angled arrows keep it on their nearest straight run)
+      if (shape !== "angled") { expect(e.lx).toBeCloseTo(e0.lx, 0); expect(e.ly).toBeCloseTo(e0.ly + 120, 0); }
+      else expect(e.ly).toBeGreaterThan(e0.ly + 60);
+      // the path's points reach the pulled point
+      const nums = (e.d.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
+      const ys = nums.filter((_, k) => k % 2 === 1);
+      expect(Math.max(...ys)).toBeGreaterThanOrEqual(e0.ly + 110);
+    });
+  }
+  it("rejects a bend that isn't [dx, dy]", () => {
+    const d = example();
+    d.links = d.links!.map((l, i) => (i === 0 ? { ...l, bend: [1] as unknown as [number, number] } : l));
+    expect(validate(d).errors.map((x) => x.path).join()).toMatch(/bend/);
   });
 });

@@ -25,6 +25,8 @@ interface Props {
   /** Move everything selected by (dx, dy) canvas px: live while dragging, then commit. */
   onMoveSel: (dx: number, dy: number, commit: boolean) => void;
   onResize: (key: Key, from: Box, to: Box, commit: boolean) => void;
+  /** Pull arrow `i` by its middle to [dx, dy] (undefined straightens it): live while dragging, then commit. */
+  onBend: (i: number, bend: [number, number] | undefined, commit: boolean) => void;
   onDraw: (kind: DrawTool, points: [number, number][], commit: boolean) => void;
   onTextTool: (x: number, y: number) => void;
   /** Dragged from a node's dot: to another node (onto one of its dots to pick the sides), or (to = null) to empty canvas at (x, y). */
@@ -80,7 +82,7 @@ export function Canvas(p: Props) {
   const [space, setSpace] = useState(false);
   const [marquee, setMarquee] = useState<Box | null>(null);
   const [wire, setWire] = useState<{ from: string; side: Side4; x: number; y: number; to?: string; toSide?: Side4 } | null>(null);
-  const drag = useRef<{ kind: "pan" | "move" | "resize" | "draw" | "marquee" | "connect"; sx: number; sy: number; vx: number; vy: number; wx: number; wy: number; moved: boolean; key?: Key; handle?: Handle; from?: Box; points?: [number, number][]; node?: string; side?: Side4; click?: Key } | null>(null);
+  const drag = useRef<{ kind: "pan" | "move" | "resize" | "draw" | "marquee" | "connect" | "bend"; edge?: number; bend0?: [number, number]; sx: number; sy: number; vx: number; vy: number; wx: number; wy: number; moved: boolean; key?: Key; handle?: Handle; from?: Box; points?: [number, number][]; node?: string; side?: Side4; click?: Key } | null>(null);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => { if (e.code === "Space" && !(e.target as HTMLElement).closest("input,textarea,select")) { setSpace(true); e.preventDefault(); } };
@@ -125,6 +127,11 @@ export function Canvas(p: Props) {
     if (handle && p.sel.length === 1) {
       const from = boxOf(p.doc, p.L, p.sel[0]);
       if (from) return begin(e, { ...base, kind: "resize", key: p.sel[0], handle, from });
+    }
+    const bendOf = (target as HTMLElement).dataset?.bend;
+    if (bendOf !== undefined) {
+      const i = Number(bendOf), cur = p.doc.links?.[i]?.bend;
+      return begin(e, { ...base, kind: "bend", edge: i, bend0: Array.isArray(cur) ? [cur[0], cur[1]] : [0, 0] });
     }
     const dot = (target as HTMLElement).dataset?.dot;
     if (dot) { const side = ((target as HTMLElement).dataset.side ?? "right") as Side4; setWire({ from: dot, side, x: w.x, y: w.y }); return begin(e, { ...base, kind: "connect", node: dot, side }); }
@@ -176,6 +183,7 @@ export function Canvas(p: Props) {
     if (d.kind === "pan") p.setView((v) => ({ ...v, x: d.vx + dx, y: d.vy + dy }));
     else if (d.kind === "move") p.onMoveSel(Math.round(dx / k), Math.round(dy / k), false);
     else if (d.kind === "resize") p.onResize(d.key!, d.from!, resized(d, dx / k, dy / k), false);
+    else if (d.kind === "bend") p.onBend(d.edge!, [Math.round(d.bend0![0] + dx / k), Math.round(d.bend0![1] + dy / k)], false);
     else if (d.kind === "marquee") setMarquee({ x: Math.min(d.wx, w.x), y: Math.min(d.wy, w.y), w: Math.abs(w.x - d.wx), h: Math.abs(w.y - d.wy) });
     else if (d.kind === "connect") {
       // over a box: show its dots; right on a dot: snap to that side
@@ -220,6 +228,7 @@ export function Canvas(p: Props) {
     const dx = e.clientX - d.sx, dy = e.clientY - d.sy, k = p.view.k;
     if (d.kind === "move") p.onMoveSel(Math.round(dx / k), Math.round(dy / k), true);
     else if (d.kind === "resize") p.onResize(d.key!, d.from!, resized(d, dx / k, dy / k), true);
+    else if (d.kind === "bend") p.onBend(d.edge!, [Math.round(d.bend0![0] + dx / k), Math.round(d.bend0![1] + dy / k)], true);
     else if (d.kind === "draw") p.onDraw(p.tool, d.points!, true);
     else if (d.kind === "marquee" && marquee) {
       const keys = [
@@ -255,6 +264,9 @@ export function Canvas(p: Props) {
         const w = world(e);
         // the first click captured the pointer, so ask the page what's really under it
         const under = document.elementFromPoint(e.clientX, e.clientY) ?? (e.target as Element);
+        // double-click an arrow's middle handle: straighten it
+        const bendAt = (under as HTMLElement).dataset?.bend;
+        if (bendAt !== undefined) { p.onBend(Number(bendAt), undefined, true); return; }
         const k = keyAt(under, w.x, w.y) ?? (() => { const n = nodeAt(p.L, w.x, w.y); return n ? `node:${n}` : null; })();
         if (k) p.onDouble(k, w.x, w.y);
       }}
@@ -290,6 +302,14 @@ export function Canvas(p: Props) {
             </div>
           );
         })}
+        {/* the selected arrow's middle: drag to pull it out of the way, double-click to straighten it */}
+        {selEdge && p.sel.length === 1 && p.tool === "select" ? (() => {
+          const e = p.L.edges.find((x) => x.i === Number(selEdge.slice(5)));
+          if (!e) return null;
+          const r = 7 / k;
+          return <span className="bend-handle" data-bend={e.i} title="Drag to pull this arrow out of the way · double-click to straighten it"
+            style={{ left: e.lx - r, top: e.ly - r, width: r * 2, height: r * 2, borderWidth: 2 / k }} />;
+        })() : null}
         {dotNode && !ed && !wire ? dotSpots(dotNode, 16 / k).map(({ side, x, y }) => {
           const r = 6 / k;
           return <span key={side} className="dot-handle" data-dot={dotNode.id} data-side={side} title="Drag onto another box to connect (or into empty space for a new step)" style={{ left: x - r, top: y - r, width: r * 2, height: r * 2, borderWidth: 2 / k }} />;

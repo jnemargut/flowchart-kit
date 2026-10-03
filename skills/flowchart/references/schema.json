@@ -425,6 +425,15 @@
               "bottom"
             ],
             "description": "which side it arrives on (same choices)"
+          },
+          "bend": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[dx, dy]: pulls the arrow's middle that far from where the layout puts it, to route around things. Editor-owned: the designer drags the arrow's middle handle. Leave it out."
           }
         }
       }
