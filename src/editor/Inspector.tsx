@@ -1,3 +1,4 @@
+import { AnyColor } from "../../vendor/sketch/color";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { plainText, RichHTML } from "../../vendor/sketch/rich";
 import { COLORS } from "../../vendor/sketch/tools";
@@ -96,12 +97,14 @@ function NodeLook({ n, P, a, t }: { n: FNode; P: (prop: string) => Path; a: Insp
         <span className="swatches wrap">
           <button className={!n.fill ? "on" : ""} title="Default" aria-label="Default fill" onClick={() => a.set(P("fill"), undefined)}><span className="dot square default" /></button>
           {FILL_NAMES.map((f) => <button key={f} className={n.fill === f ? "on" : ""} title={`${f}: ${FILLS[f].doc}`} aria-label={f} onClick={() => a.set(P("fill"), f)}><span className={`dot square${f === "none" ? " none" : ""}`} style={f === "none" ? undefined : { background: FILLS[f].fill }} /></button>)}
+          <AnyColor square value={n.fill} onPick={(h) => a.set(P("fill"), h)} title="Any fill color" />
         </span>
       </Field>
       <Field label={boxy ? "Border" : "Text color"} wide>
         <span className="swatches wrap">
           <button className={!n.stroke ? "on" : ""} title="Default" aria-label="Default color" onClick={() => a.set(P("stroke"), undefined)}><span className="dot default" /></button>
           {LINE_COLOR_NAMES.filter((c) => boxy || c !== "none").map((c) => <button key={c} className={n.stroke === c ? "on" : ""} title={c === "none" ? "no border" : c} aria-label={c} onClick={() => a.set(P("stroke"), c)}><span className={`dot${c === "none" ? " none" : ""}`} style={c === "none" ? undefined : { background: LINE_COLORS[c] }} /></button>)}
+          <AnyColor value={n.stroke} onPick={(h) => a.set(P("stroke"), h)} title="Any border color" />
         </span>
       </Field>
       {boxy ? <Field label="Border weight" wide><Seg value={n.weight ?? "normal"} options={WEIGHTS} labels={WEIGHT_LABEL} onChange={(v) => a.set(P("weight"), v === "normal" ? undefined : v)} /></Field> : null}
@@ -147,7 +150,7 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
         {isFlow ? <label className="field inline"><span>The product shows up here (teal)</span><input type="checkbox" checked={!!n.product} onChange={(e) => a.set(P("product"), e.target.checked || undefined)} /></label> : null}
         {t === "sticky" ? (
           <Field label="Color">
-            <span className="swatches">{STICKY_COLORS.map((c) => <button key={c} className={(n.color ?? "yellow") === c ? "on" : ""} title={`${c}: ${STICKY[c].doc}`} aria-label={c} onClick={() => a.set(P("color"), c === "yellow" ? undefined : c)}><span className="dot square" style={{ background: STICKY[c].fill }} /></button>)}</span>
+            <span className="swatches">{STICKY_COLORS.map((c) => <button key={c} className={(n.color ?? "yellow") === c ? "on" : ""} title={`${c}: ${STICKY[c].doc}`} aria-label={c} onClick={() => a.set(P("color"), c === "yellow" ? undefined : c)}><span className="dot square" style={{ background: STICKY[c].fill }} /></button>)}<AnyColor square value={n.color} onPick={(h) => a.set(P("color"), h)} title="Any paper color" /></span>
           </Field>
         ) : null}
         {t === "stamp" ? (
@@ -243,6 +246,7 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
           <span className="swatches wrap">
             <button className={!l.color ? "on" : ""} title="Default" aria-label="Default color" onClick={() => a.set(["links", i, "color"], undefined)}><span className="dot default" /></button>
             {LINE_COLOR_NAMES.filter((c) => c !== "none").map((c) => <button key={c} className={l.color === c ? "on" : ""} title={c} aria-label={c} onClick={() => a.set(["links", i, "color"], c)}><span className="dot" style={{ background: LINE_COLORS[c] }} /></button>)}
+            <AnyColor value={l.color} onPick={(h) => a.set(["links", i, "color"], h)} title="Any line color" />
           </span>
         </Field>
         <Field label="Weight" wide><Seg value={l.weight ?? "normal"} options={WEIGHTS} labels={WEIGHT_LABEL} onChange={(v) => a.set(["links", i, "weight"], v === "normal" ? undefined : v)} /></Field>
@@ -259,7 +263,7 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
       <aside className="inspector">
         <h3>Drawing<small>{s.type}</small></h3>
         {s.type === "text" ? <Field label="Words" wide><Text area value={s.text ?? ""} focusKey={focusText} onChange={(v) => a.set([...path, "text"], v, `stext:${key}`)} /></Field> : null}
-        <Field label="Color"><span className="swatches">{COLORS.map((c) => <button key={c} title={c} aria-label={c} className={(s.color ?? "ink") === c ? "on" : ""} onClick={() => a.set([...path, "color"], c === "ink" ? undefined : c)}><span className="dot" style={{ background: MARKER[c] }} /></button>)}</span></Field>
+        <Field label="Color"><span className="swatches">{COLORS.map((c) => <button key={c} title={c} aria-label={c} className={(s.color ?? "ink") === c ? "on" : ""} onClick={() => a.set([...path, "color"], c === "ink" ? undefined : c)}><span className="dot" style={{ background: MARKER[c] }} /></button>)}<AnyColor value={s.color} onPick={(h) => a.set([...path, "color"], h)} /></span></Field>
         {s.type === "rect" || s.type === "ellipse" || s.type === "path" ? (
           <Field label="Fill"><span className="seg">{(["none", "light", "mid", "dark"] as const).map((f) => <button key={f} className={(s.fill ?? "none") === f ? "on" : ""} onClick={() => a.set([...path, "fill"], f === "none" ? undefined : f)}>{f}</button>)}</span></Field>
         ) : null}

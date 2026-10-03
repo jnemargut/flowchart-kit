@@ -1,3 +1,4 @@
+import { isHex, normHex } from "../vendor/sketch/tokens";
 import { mkdirSync, readFileSync } from "node:fs";
 import { plainText } from "../vendor/sketch/rich";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
@@ -113,7 +114,7 @@ export function toJSONCanvas(doc: FlowchartFile, file: string, outDir: string, L
     if (t === "card" && cards[b.id]?.png) nodes.push({ ...base, type: "file", file: relative(outDir, cards[b.id].png!).split(sep).join("/") });
     else if (t === "link" && n.url) nodes.push({ ...base, type: "link", url: n.url });
     else if (t === "stamp") nodes.push({ ...base, type: "text", text: `(${n.icon ?? "stamp"})` });
-    else nodes.push({ ...base, type: "text", text: t === "diamond" ? `${n.text ?? ""}?`.replace(/\?\?$/, "?") : t === "card" ? n.ref ?? "" : n.text ?? "", ...(t === "sticky" && CANVAS_COLOR[n.color ?? "yellow"] ? { color: CANVAS_COLOR[n.color ?? "yellow"] } : n.product ? { color: "5" } : {}) });
+    else nodes.push({ ...base, type: "text", text: t === "diamond" ? `${n.text ?? ""}?`.replace(/\?\?$/, "?") : t === "card" ? n.ref ?? "" : n.text ?? "", ...(t === "sticky" && isHex(n.color) ? { color: normHex(n.color!) } : t !== "sticky" && isHex(n.fill) ? { color: normHex(n.fill!) } : t === "sticky" && CANVAS_COLOR[n.color ?? "yellow"] ? { color: CANVAS_COLOR[n.color ?? "yellow"] } : n.product ? { color: "5" } : {}) });
   }
   const edges = (doc.links ?? []).filter((l) => lay.nodes[l.from] && lay.nodes[l.to]).map((l, i) => ({ id: `link-${i}`, fromNode: l.from, toNode: l.to, toEnd: "arrow", ...(l.label ? { label: l.label } : {}) }));
   return JSON.stringify({ nodes, edges }, null, 2) + "\n";

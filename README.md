@@ -109,6 +109,26 @@ That's what `/low-fi-think` is for. It ships with Flowchart Kit and uses all thr
 /low-fi-think The PM wants me to do PAY-218, I need to rethink it. They linked PAY-218 and PAY-221.
 ```
 
+It picks a recipe by the question you're asking, not by what's newest:
+
+| The question | What it makes |
+|---|---|
+| The PM wants X, but is X the right thing? | The ask vs. what really happens, options, questions to take back |
+| Notes everywhere, no shape yet | Stickies grouped into what they mean, plus open questions |
+| Which of these directions? | A frame per direction, then side by side |
+| Where does this flow break? | The happy path, a frame per unhappy path, screens at the branches |
+| How do I explain this decision? | Before, after, what we're not doing, what we need: a deck |
+| Where do we even start? | A one-frame brief: problem, who, decided, unknowns, how we'd know |
+| What did the research say? | Findings in people's own words, and a storyboard built from their quotes |
+| How do others do it? | Their screens in a row per product, with what to steal and avoid |
+| What has to happen behind the scenes? | A service blueprint: the person, the product, staff and systems in lanes |
+| What screens are there? | A site map, top down, with orphans and dead ends flagged |
+| What's the smallest version? | Now, next and later, with the small and full versions wireframed side by side |
+| What could make this fail? | Assumptions ranked by risk, with a cheap test for the top three |
+| Will people get it? | A clickable flow, tasks in the person's words, and what to watch for |
+| Why change anything? | Today's storyboard beside the proposed one, panel for panel |
+| What should it look like? | A moodboard: your references in full color, mood words, palettes and type, two or three directions |
+
 Don't have Storyboard Kit or Wireframe Kit? It works around them and tells you what it's missing. `fc kits` shows
 what's installed.
 
@@ -116,10 +136,13 @@ what's installed.
 
 - **Flow shapes.** Start and end pills, steps, decisions, and arrows with labels ("yes", "no", "after 10 min").
   Mark the steps where the product shows up and they turn teal, like in a storyboard.
+- **Any color, when color is the point.** Every color row ends in a **+**: the system color picker, a hex field,
+  and a dropper that grabs a color from anywhere on your screen (Chrome and Edge). Colors you've used come back as
+  one-click dots. Handy for palettes on a moodboard; everything else stays in calm marker grays.
 - **Stickies** in five colors, with a peeled-up corner so they look stuck on: yellow for notes, pink for worries,
   blue for ideas, green for what works, gray for parked.
 - **Looks, when you want them.** Text from small to huge, fills (including plain white for covering something up),
-  border colors and weights. Arrows can be curved, angled or straight, solid, dashed or dotted, in any marker color,
+  border colors and weights. Arrows can be curved, angled or straight, solid, dashed or dotted, in any color,
   with an arrowhead at either end, both, or neither.
 - **Stamps.** A click cursor to drop on a screen, a star for the best idea, a smiley, a frown, thumbs up and
   down, a question mark, a flag and a dozen more. Drop one on anything and it sticks to it.
@@ -129,7 +152,7 @@ what's installed.
   empty one to fill in. It's sketchified in grays to match (switch that off if you want the real thing), and
   **Crop…** shows just the part you want. Cards from the other kits crop too.
 - **Text** wherever you want it, with **bold**, *italic*, underline and ~~strikethrough~~ (Cmd+B, Cmd+I, Cmd+U).
-- **Drawing.** A pen, boxes, ovals, lines, arrows and free text in six marker colors. Draw swimlanes inside a
+- **Drawing.** A pen, boxes, ovals, lines, arrows and free text in six marker colors, or any color you pick. Draw swimlanes inside a
   frame and they move with it.
 
 ## The editor bits

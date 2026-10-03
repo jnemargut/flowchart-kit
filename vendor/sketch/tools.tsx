@@ -1,6 +1,7 @@
 /** The floating drawing toolbar every kit's editor shares: select, pen, box, oval, line, arrow, text, and a marker color. */
 import { useState, type ReactNode } from "react";
-import { MARKER } from "./tokens";
+import { AnyColor } from "./color";
+import { markerHex, MARKER } from "./tokens";
 
 export type DrawTool = "select" | "pen" | "rect" | "ellipse" | "line" | "arrow" | "text";
 export const COLORS = ["ink", "grey", "red", "blue", "green", "yellow"] as const;
@@ -30,10 +31,11 @@ export function Tools({ tool, setTool, color, setColor }: { tool: DrawTool; setT
         </button>
       ))}
       <div className="tool-color">
-        <button title="Marker color" aria-label="Marker color" onClick={() => setOpen(!open)}><span className="dot" style={{ background: MARKER[color] }} /></button>
+        <button title="Marker color" aria-label="Marker color" onClick={() => setOpen(!open)}><span className="dot" style={{ background: markerHex(color) }} /></button>
         {open ? (
           <div className="color-pop">
             {COLORS.map((c) => <button key={c} title={c} aria-label={c} className={c === color ? "on" : ""} onClick={() => { setColor(c); setOpen(false); }}><span className="dot" style={{ background: MARKER[c] }} /></button>)}
+            <AnyColor value={color} onPick={(h) => setColor(h)} title="Any marker color" />
           </div>
         ) : null}
       </div>

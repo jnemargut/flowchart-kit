@@ -1,3 +1,4 @@
+import { isHex } from "../vendor/sketch/tokens";
 /** Checks a flowchart file. Errors say exactly what to change; warnings are nudges toward a clearer board. */
 import { findUndrawable, undrawableHint } from "../vendor/sketch/glyphs";
 import { formatIssues, suggest, type Issue, type Result } from "../vendor/sketch/suggest";
@@ -6,6 +7,7 @@ import { isCrop } from "../vendor/sketch/crop";
 import { layoutBoard } from "./layout";
 import { isNote, typeOf, type FlowchartFile } from "./types";
 import { CONNECTORS, FILL_NAMES, HEADS, LINE_COLOR_NAMES, LINK_STYLES, NODE_TYPES, SIDES, SIDES4, STAMP_NAMES, STICKY_COLORS, TEXT_SIZES, TYPES, WEIGHTS } from "./vocab";
+import type { StickyColor } from "./types";
 
 export type { Result };
 
@@ -14,9 +16,9 @@ const FRAME_KEYS = ["title", "near", "dir", "notes", "url", "shapes", "size"];
 const okUrl = (u: unknown) => typeof u === "string" && /^(https?:\/\/|mailto:|figma:|file:|\.{0,2}\/)\S+$/i.test(u.trim());
 const LINK_KEYS = ["from", "to", "label", "style", "shape", "head", "color", "weight", "fromSide", "toSide"];
 /** One of a fixed set, with a "did you mean". */
-const pick = (err: (p: string, m: string, h?: string) => void, path: string, v: unknown, options: readonly string[], what: string) => {
-  if (v === undefined) return;
-  if (!options.includes(String(v))) { const s = suggest(String(v), options); err(path, `"${String(v)}" isn't a ${what}.`, s ? `Did you mean "${s}"?` : `Use one of: ${options.join(", ")}`); }
+const pick = (err: (p: string, m: string, h?: string) => void, path: string, v: unknown, options: readonly string[], what: string, hex = false) => {
+  if (v === undefined || (hex && isHex(v))) return;
+  if (!options.includes(String(v))) { const s = suggest(String(v), options); err(path, `"${String(v)}" isn't a ${what}.`, s ? `Did you mean "${s}"?` : `Use one of: ${options.join(", ")}${hex ? `, or any hex like "#e8b04b"` : ""}`); }
 };
 const TOP_KEYS = ["$schema", "title", "frames", "nodes", "links", "present", "transition", "connectors", "shapes", "markup", "layout", "canvas"];
 
@@ -65,7 +67,7 @@ export function validate(doc: FlowchartFile): Result {
     if (n.frame !== undefined && !frames[n.frame]) { const s = suggest(n.frame, frameIds); err(`${p}.frame`, `There's no frame "${n.frame}".`, s ? `Did you mean "${s}"?` : frameIds.length ? `Frames: ${frameIds.join(", ")}` : `Add it to "frames", or leave "frame" out.`); }
     if (n.color !== undefined) {
       if (t !== "sticky") warn(`${p}.color`, `"color" only applies to stickies.`, "Leave it out, or make it a sticky.");
-      else if (!STICKY_COLORS.includes(n.color)) { const s = suggest(String(n.color), STICKY_COLORS); err(`${p}.color`, `"${n.color}" isn't a sticky color.`, s ? `Did you mean "${s}"?` : `Colors: ${STICKY_COLORS.join(", ")}`); }
+      else if (!STICKY_COLORS.includes(n.color as StickyColor) && !isHex(n.color)) { const s = suggest(String(n.color), STICKY_COLORS); err(`${p}.color`, `"${n.color}" isn't a sticky color.`, s ? `Did you mean "${s}"?` : `Colors: ${STICKY_COLORS.join(", ")}`); }
     }
     if (n.near !== undefined) {
       if (!isNote(n)) warn(`${p}.near`, `"near" only applies to stickies, text and stamps.`, "Link it with \"links\" instead.");
@@ -93,8 +95,8 @@ export function validate(doc: FlowchartFile): Result {
     if (n.crop !== undefined && t !== "card") warn(`${p}.crop`, `"crop" only applies to cards.`);
     if (n.sketch !== undefined && (t !== "card" || !n.ref || parseRef(n.ref).kind !== "image")) warn(`${p}.sketch`, `"sketch" only applies to image cards.`);
     pick(err, `${p}.size`, n.size, TEXT_SIZES, "text size");
-    pick(err, `${p}.fill`, n.fill, FILL_NAMES, "fill");
-    pick(err, `${p}.stroke`, n.stroke, LINE_COLOR_NAMES, "border color");
+    pick(err, `${p}.fill`, n.fill, FILL_NAMES, "fill", true);
+    pick(err, `${p}.stroke`, n.stroke, LINE_COLOR_NAMES, "border color", true);
     pick(err, `${p}.weight`, n.weight, WEIGHTS, "line weight");
     if (n.product !== undefined && typeof n.product !== "boolean") err(`${p}.product`, '"product" is true or false.');
   }
@@ -113,7 +115,7 @@ export function validate(doc: FlowchartFile): Result {
     pick(err, `${p}.style`, l.style, LINK_STYLES, "line style");
     pick(err, `${p}.head`, l.head, HEADS, "arrowhead setting");
     pick(err, `${p}.shape`, l.shape, CONNECTORS, "connector shape");
-    pick(err, `${p}.color`, l.color, LINE_COLOR_NAMES.filter((c) => c !== "none"), "line color");
+    pick(err, `${p}.color`, l.color, LINE_COLOR_NAMES.filter((c) => c !== "none"), "line color", true);
     pick(err, `${p}.weight`, l.weight, WEIGHTS, "line weight");
     pick(err, `${p}.fromSide`, l.fromSide, SIDES4, "side");
     pick(err, `${p}.toSide`, l.toSide, SIDES4, "side");

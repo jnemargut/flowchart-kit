@@ -232,3 +232,24 @@ describe("editing", () => {
     expect(d.present).toEqual(["happy", "late"]);
   });
 });
+
+describe("any color", () => {
+  const d: FlowchartFile = {
+    title: "palette",
+    nodes: {
+      honey: { type: "box", text: "Honey", fill: "#E8B04B", stroke: "#7a4b1f" },
+      note: { type: "sticky", text: "warm", color: "#f6d6c8" },
+      a: { type: "box", text: "A" },
+    },
+    links: [{ from: "a", to: "honey", color: "#2f6fd0" }],
+  } as unknown as FlowchartFile;
+  it("takes a hex wherever a color is chosen, and draws it", () => {
+    expect(validate(d).errors).toEqual([]);
+    const svg = boardSVG(d).toLowerCase();
+    for (const c of ["#e8b04b", "#7a4b1f", "#f6d6c8", "#2f6fd0"]) expect(svg).toContain(c);
+  });
+  it("still rejects colors that are neither a name nor a hex", () => {
+    const bad = { ...d, nodes: { ...d.nodes, honey: { type: "box", text: "x", fill: "#zzz" } } } as unknown as FlowchartFile;
+    expect(validate(bad).errors.map((e) => e.path)).toContain("nodes.honey.fill");
+  });
+});

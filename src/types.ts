@@ -12,7 +12,8 @@ export interface FNode {
   /** The frame it lives in. Leave out for the loose area of the board. */
   frame?: string;
   /** Sticky color (default yellow). */
-  color?: StickyColor;
+  /** A sticky's paper: a sticky color name or any hex. */
+  color?: StickyColor | string;
   /** Stickies and text: sit right beside this node. Stamps: sit on top of it. */
   near?: string;
   /** Stamps: which one (cursor, star, smiley…). */

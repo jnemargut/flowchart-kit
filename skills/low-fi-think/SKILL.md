@@ -62,6 +62,16 @@ Pull out, privately, before drawing anything:
 | Too many ideas, notes and unknowns to hold in your head | **Board of stickies** grouped into frames |
 | Which of several directions? | **Flowchart** frames, one per option, each with the cards that show it |
 | Something to bring back to the PM or the team | A **board with frames in story order**: it presents as slides |
+| Where do we even start? (a new project, a vague brief) | **Kickoff** frame: problem, who, decided, unknowns, success |
+| What did the research actually say? | **Findings**: themed stickies, then a storyboard in people's own words |
+| How do others do this? | **Teardown**: their screens as image cards, a row per product |
+| What has to happen behind the scenes for this to work? | **Service blueprint**: lanes for person, product, staff, systems |
+| What screens exist and how do they connect? | **Site map**: every screen as a tree, top down |
+| What's the smallest version worth building? | **Scope cut**: now / next / later, smallest version wireframed |
+| What could make this fail? | **Assumptions and risks**, ranked, with a quick test for the top ones |
+| Will people get it? | **Usability test plan**: a clickable flow, tasks, what to watch |
+| Why change anything? | **Before and after**: today's storyboard beside the proposed one |
+| What should it look and feel like? (only when asked about look, feel or visual style) | **Visual direction**: a moodboard |
 
 Most rethinks need two or three of these, tied together on one board. Pick the smallest set that answers the
 actual question. One sharp storyboard beats three half-done artifacts.
@@ -111,7 +121,9 @@ with short relative paths. Storyboards and wireframes feed each other, so go in 
 Stamps, colors and emphasis carry meaning, not decoration: teal (`"product": true`) only where the product
 shows up, red for where it breaks, a `cursor` stamp where someone taps, **bold** for the one word that matters.
 
-More recipes (pushing back on a request, a messy brainstorm, comparing directions, explaining a decision):
+Recipes for each of these (pushing back on a request, a messy brainstorm, comparing directions, mapping edge
+cases, explaining a decision, kicking off, research findings, teardowns, service blueprints, site maps, cutting
+scope, assumptions and risks, usability tests, before and after, visual direction):
 [references/plays.md](references/plays.md).
 
 ## 5. Hand it over

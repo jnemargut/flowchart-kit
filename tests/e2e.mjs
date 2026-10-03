@@ -13,7 +13,8 @@ const file = join(dir, "late-order.flowchart.json");
 const read = () => JSON.parse(readFileSync(file, "utf8"));
 let failures = 0;
 const ok = (name, cond, extra = "") => { console.log(`${cond ? "✓" : "✗"} ${name}${cond ? "" : ` ${extra}`}`); if (!cond) failures++; };
-const until = async (fn, ms = 5000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await new Promise((r) => setTimeout(r, 80)); } return false; };
+// a read can land mid-save (half a file): that's "not yet", so keep waiting
+const until = async (fn, ms = 5000) => { const t = Date.now(); while (Date.now() - t < ms) { try { if (await fn()) return true; } catch { /* mid-save */ } await new Promise((r) => setTimeout(r, 80)); } return false; };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // CLI

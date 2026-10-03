@@ -5,9 +5,9 @@ import { CONNECTORS, FILL_NAMES, FRAME_PROPS, HEADS, LINE_COLOR_NAMES, LINK_PROP
 const point = { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 };
 const shape = {
   type: "object", required: ["type", "points"],
-  properties: { id: { type: "string" }, type: { enum: [...SHAPE_TYPES] }, points: { type: "array", items: point }, fill: { enum: [...SHAPE_FILLS] }, text: { type: "string" }, color: { enum: [...SHAPE_COLORS] }, weight: { enum: [...SHAPE_WEIGHTS] }, size: { enum: [...SHAPE_TEXT_SIZES] }, front: { type: "boolean", description: "Drawn in front of the boxes and cards." } },
+  properties: { id: { type: "string" }, type: { enum: [...SHAPE_TYPES] }, points: { type: "array", items: point }, fill: { enum: [...SHAPE_FILLS] }, text: { type: "string" }, color: { anyOf: [{ enum: [...SHAPE_COLORS] }, { type: "string", pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", description: "Any color as a hex, e.g. \"#e8b04b\"." }] }, weight: { enum: [...SHAPE_WEIGHTS] }, size: { enum: [...SHAPE_TEXT_SIZES] }, front: { type: "boolean", description: "Drawn in front of the boxes and cards." } },
 };
-const strokes = { type: "array", items: { type: "object", required: ["points"], properties: { points: { type: "array", items: point }, color: { enum: [...MARKER_COLORS] } } } };
+const strokes = { type: "array", items: { type: "object", required: ["points"], properties: { points: { type: "array", items: point }, color: { anyOf: [{ enum: [...MARKER_COLORS] }, { type: "string", pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", description: "Any color as a hex, e.g. \"#e8b04b\"." }] } } } };
 
 export function buildSchema() {
   return {
@@ -42,7 +42,7 @@ export function buildSchema() {
             type: { enum: TYPES, description: NODE_PROPS.type },
             text: { type: "string", description: NODE_PROPS.text },
             frame: { type: "string", description: NODE_PROPS.frame },
-            color: { enum: STICKY_COLORS, description: NODE_PROPS.color },
+            color: { anyOf: [{ enum: STICKY_COLORS }, { type: "string", pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", description: "Any color as a hex, e.g. \"#e8b04b\"." }], description: NODE_PROPS.color },
             near: { type: "string", description: NODE_PROPS.near },
             icon: { enum: STAMP_NAMES, description: NODE_PROPS.icon },
             at: { ...point, description: NODE_PROPS.at },
@@ -52,8 +52,8 @@ export function buildSchema() {
             crop: { type: "array", items: { type: "number", minimum: 0, maximum: 1 }, minItems: 4, maxItems: 4, description: NODE_PROPS.crop },
             product: { type: "boolean", description: NODE_PROPS.product },
             size: { enum: [...TEXT_SIZES], description: NODE_PROPS.size },
-            fill: { enum: FILL_NAMES, description: NODE_PROPS.fill },
-            stroke: { enum: LINE_COLOR_NAMES, description: NODE_PROPS.stroke },
+            fill: { anyOf: [{ enum: FILL_NAMES }, { type: "string", pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", description: "Any color as a hex, e.g. \"#e8b04b\"." }], description: NODE_PROPS.fill },
+            stroke: { anyOf: [{ enum: LINE_COLOR_NAMES }, { type: "string", pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", description: "Any color as a hex, e.g. \"#e8b04b\"." }], description: NODE_PROPS.stroke },
             weight: { enum: [...WEIGHTS], description: NODE_PROPS.weight },
           },
         },
@@ -62,7 +62,7 @@ export function buildSchema() {
         type: "array",
         items: {
           type: "object", required: ["from", "to"], additionalProperties: false,
-          properties: { from: { type: "string", description: LINK_PROPS.from }, to: { type: "string", description: LINK_PROPS.to }, label: { type: "string", description: LINK_PROPS.label }, style: { enum: [...LINK_STYLES], description: LINK_PROPS.style }, shape: { enum: [...CONNECTORS], description: LINK_PROPS.shape }, head: { enum: [...HEADS], description: LINK_PROPS.head }, color: { enum: LINE_COLOR_NAMES.filter((c) => c !== "none"), description: LINK_PROPS.color }, weight: { enum: [...WEIGHTS], description: LINK_PROPS.weight }, fromSide: { enum: [...SIDES4], description: LINK_PROPS.fromSide }, toSide: { enum: [...SIDES4], description: LINK_PROPS.toSide } },
+          properties: { from: { type: "string", description: LINK_PROPS.from }, to: { type: "string", description: LINK_PROPS.to }, label: { type: "string", description: LINK_PROPS.label }, style: { enum: [...LINK_STYLES], description: LINK_PROPS.style }, shape: { enum: [...CONNECTORS], description: LINK_PROPS.shape }, head: { enum: [...HEADS], description: LINK_PROPS.head }, color: { anyOf: [{ enum: LINE_COLOR_NAMES.filter((c) => c !== "none") }, { type: "string", pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", description: "Any color as a hex, e.g. \"#e8b04b\"." }], description: LINK_PROPS.color }, weight: { enum: [...WEIGHTS], description: LINK_PROPS.weight }, fromSide: { enum: [...SIDES4], description: LINK_PROPS.fromSide }, toSide: { enum: [...SIDES4], description: LINK_PROPS.toSide } },
         },
       },
       present: { type: "array", items: { type: "string" }, description: "Frame ids in presenting order." },

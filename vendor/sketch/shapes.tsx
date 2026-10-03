@@ -1,12 +1,12 @@
 /** Hand-drawn shapes (boxes, ovals, lines, arrows, freehand, free text) and crit markup, in marker style. */
 import { plainText, richLines } from "./rich";
-import { C, FONT, MARKER } from "./tokens";
+import { C, FONT, MARKER, markerHex } from "./tokens";
 
 /** "rect" | "ellipse" | "line" | "arrow" | "path" | "text" (each kit's vocabulary checks the values). */
 export type SketchShapeType = string;
 /** "none" | "light" | "mid" | "dark" | "white" */
 export type SketchFill = string;
-/** "ink" | "grey" | "red" | "blue" | "green" | "yellow" (shapes also take "none": no outline) */
+/** "ink" | "grey" | "red" | "blue" | "green" | "yellow", or any "#rrggbb" (shapes also take "none": no outline) */
 export type SketchColor = string;
 export const SHAPE_TYPES = ["rect", "ellipse", "line", "arrow", "path", "text"] as const;
 /** "white" is solid paper white with no offset: good for covering part of a picture. */
@@ -78,15 +78,15 @@ export function ShapeMark({ s, scale = 1 }: { s: SketchShape; scale?: number }) 
     return (
       <g>
         <rect x={x - w / 2 - 4} y={y - h / 2 - 3} width={w + 8} height={h + 6} fill="transparent" />
-        <text textAnchor="middle" fontFamily={FONT.hand} fontSize={size} fill={s.color && s.color !== "yellow" && MARKER[s.color] ? MARKER[s.color] : C.ink} stroke={s.color === "yellow" ? MARKER.yellow : C.paper} strokeWidth={3.5 * scale} strokeLinejoin="round" paintOrder="stroke">
-          {lines.map((l, i) => <tspan key={i} x={x} y={top + i * lh}>{l ? richLines(l, [plainText(l)], s.color && s.color !== "yellow" ? MARKER[s.color] : C.ink, size)[0] : " "}</tspan>)}
+        <text textAnchor="middle" fontFamily={FONT.hand} fontSize={size} fill={s.color && s.color !== "yellow" && s.color !== "none" ? markerHex(s.color, C.ink) : C.ink} stroke={s.color === "yellow" ? MARKER.yellow : C.paper} strokeWidth={3.5 * scale} strokeLinejoin="round" paintOrder="stroke">
+          {lines.map((l, i) => <tspan key={i} x={x} y={top + i * lh}>{l ? richLines(l, [plainText(l)], s.color && s.color !== "yellow" && s.color !== "none" ? markerHex(s.color, C.ink) : C.ink, size)[0] : " "}</tspan>)}
         </text>
       </g>
     );
   }
   const [a, b] = s.points;
   const noLine = s.color === "none";
-  const ink = noLine ? "none" : MARKER[s.color ?? "ink"] ?? C.ink;
+  const ink = noLine ? "none" : markerHex(s.color, C.ink);
   const colored = !!s.color && s.color !== "ink" && s.color !== "grey" && !noLine && s.fill !== "white";
   // gray fills stay gray; a colored shape gets a see-through tint of its own color instead
   const fill = colored && s.fill && s.fill !== "none" ? ink : SHAPE_FILL[s.fill ?? "none"] ?? "none";
@@ -132,7 +132,7 @@ export function MarkupStrokes({ strokes, hit, scale = 1 }: { strokes: MarkupStro
         return (
           <g key={i} data-mk={i}>
             {hit && <path d={d} fill="none" stroke="transparent" strokeWidth={16 * scale} strokeLinecap="round" />}
-            <path d={d} fill="none" stroke={MARKER[m.color ?? "red"] ?? MARKER.red} strokeWidth={(hl ? 12 : 4.5) * scale} strokeOpacity={hl ? 0.55 : 0.92} strokeLinecap="round" strokeLinejoin="round" />
+            <path d={d} fill="none" stroke={markerHex(m.color ?? "red", MARKER.red)} strokeWidth={(hl ? 12 : 4.5) * scale} strokeOpacity={hl ? 0.55 : 0.92} strokeLinecap="round" strokeLinejoin="round" />
           </g>
         );
       })}

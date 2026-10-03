@@ -12,6 +12,11 @@ import { WobbleFilter } from "../../vendor/sketch/wobble";
 import { hostOf, layoutBoard, slides, TITLE_H, type Box, type BoardLayout, type Edge, type NodeBox } from "../layout";
 import type { CardInfo, Cards, FlowchartFile, FNode } from "../types";
 import { FILLS, LINE_COLORS, STICKY, WEIGHT_PX } from "../vocab";
+import type { StickyColor } from "../types";
+import { isDarkColor, isHex, normHex } from "../../vendor/sketch/tokens";
+
+/** A named color from `table`, or any hex. */
+const anyColor = (v: string, table: Record<string, string>, fallback: string) => (isHex(v) ? normHex(v) : table[v] ?? fallback);
 import { Stamp } from "./stamps";
 
 export interface ArtOpts {
@@ -64,17 +69,19 @@ export function LinkBadge({ url, x, y, r = 13 }: { url: string; x: number; y: nu
 }
 
 function NodeArt({ b, n, o, wob }: { b: NodeBox; n: FNode; o: ArtOpts; wob?: string }) {
-  const ink = n.stroke ? LINE_COLORS[n.stroke] ?? C.ink : n.product ? C.tealDark : C.ink;
+  const ink = n.stroke ? anyColor(n.stroke, LINE_COLORS, C.ink) : n.product ? C.tealDark : C.ink;
   const line = { stroke: ink, strokeWidth: WEIGHT_PX[n.weight ?? "normal"] ?? 2.4, strokeLinejoin: "round" as const };
-  const chosen = n.fill ? FILLS[n.fill]?.fill : undefined;
+  const chosen = n.fill ? (isHex(n.fill) ? normHex(n.fill) : FILLS[n.fill]?.fill) : undefined;
   const face = chosen ?? (n.product ? PRODUCT_FILL : "#fff");
   // the marker's offset shadow: not for solid white (it's for covering things), see-through, or no-border boxes
   const shadow = n.fill !== "white" && n.fill !== "none" && n.stroke !== "none";
-  const words = n.fill === "dark" ? C.paper : C.ink;
+  // light words on a dark fill, named or any hex
+  const darkFace = n.fill === "dark" || (!!chosen && isDarkColor(chosen));
+  const words = darkFace ? C.paper : C.ink;
   const off = `translate(${OFFSET.x} ${OFFSET.y})`;
   if (b.type === "text") {
     const bg = chosen && chosen !== "none" ? <rect x={b.x - 6} y={b.y - 4} width={b.w + 12} height={b.h + 8} rx={4} fill={chosen} stroke={n.stroke && n.stroke !== "none" ? ink : "none"} strokeWidth={line.strokeWidth} /> : null;
-    return <g data-node={b.id}><rect x={b.x} y={b.y} width={b.w} height={b.h} fill="transparent" />{bg}<Words b={b} src={n.text} color={n.fill === "dark" ? C.paper : n.stroke && n.stroke !== "none" && !bg ? ink : C.g8} /></g>;
+    return <g data-node={b.id}><rect x={b.x} y={b.y} width={b.w} height={b.h} fill="transparent" />{bg}<Words b={b} src={n.text} color={darkFace ? C.paper : n.stroke && n.stroke !== "none" && !bg ? ink : C.g8} /></g>;
   }
   if (b.type === "link") {
     const url = n.url ?? "";
@@ -91,12 +98,12 @@ function NodeArt({ b, n, o, wob }: { b: NodeBox; n: FNode; o: ArtOpts; wob?: str
   }
   if (b.type === "stamp") return <g data-node={b.id}><rect x={b.x} y={b.y} width={b.w} height={b.h} fill="transparent" /><Stamp icon={n.icon} x={b.x} y={b.y} s={b.w} /></g>;
   if (b.type === "sticky") {
-    const fill = STICKY[n.color ?? "yellow"]?.fill ?? STICKY.yellow.fill;
+    const fill = isHex(n.color) ? normHex(n.color!) : STICKY[(n.color ?? "yellow") as StickyColor]?.fill ?? STICKY.yellow.fill;
     const [cx, cy] = [b.x + b.w / 2, b.y + b.h / 2];
     return (
       <g data-node={b.id} transform={`rotate(${tilt(b.id)} ${cx} ${cy})`}>
         <StickyPaper x={b.x} y={b.y} w={b.w} h={b.h} fill={fill} />
-        <Words b={b} src={n.text} top={b.y + 24 + b.size * 0.8} />
+        <Words b={b} src={n.text} top={b.y + 24 + b.size * 0.8} color={isDarkColor(fill) ? C.paper : undefined} />
       </g>
     );
   }
@@ -144,7 +151,7 @@ const chevron = (p: [number, number], angle: number, k: number) =>
   `M${p[0] - k * Math.cos(angle - 0.45)} ${p[1] - k * Math.sin(angle - 0.45)} L${p[0]} ${p[1]} L${p[0] - k * Math.cos(angle + 0.45)} ${p[1] - k * Math.sin(angle + 0.45)}`;
 
 export function EdgeArt({ e, highlight, wob }: { e: Edge; highlight?: boolean; wob?: string }) {
-  const base = e.color ? LINE_COLORS[e.color] ?? C.g8 : C.g8;
+  const base = e.color ? anyColor(e.color, LINE_COLORS, C.g8) : C.g8;
   const color = highlight ? C.action : base;
   const w0 = WEIGHT_PX[e.weight ?? "normal"] ?? 2.4;
   const w = highlight ? w0 + 0.8 : w0;

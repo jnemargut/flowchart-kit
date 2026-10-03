@@ -1,3 +1,5 @@
+import { AnyColor } from "../../vendor/sketch/color";
+import { markerHex } from "../../vendor/sketch/tokens";
 import { useEffect, useRef, useState } from "react";
 import { plainText, RichHTML } from "../../vendor/sketch/rich";
 import type { MarkupStroke } from "../../vendor/sketch/shapes";
@@ -76,8 +78,8 @@ export function Play({ doc, L, cards, cardHref, start, onExit, onMarkup }: { doc
         <div className="play-tools" role="group" aria-label="Markup">
           <button className={tool === "pen" ? "on" : ""} aria-pressed={tool === "pen"} onClick={() => setTool(tool === "pen" ? null : "pen")} title="Sharpie: draw over the slide (D)">Sharpie</button>
           <span className="pen-color">
-            <button className="pen-dot" style={{ background: MARKER[color] }} onClick={() => setPicking(!picking)} aria-expanded={picking} aria-label={`Sharpie color: ${color}`} title="Sharpie color" />
-            {picking ? <span className="pen-pop">{COLORS.map((c) => <button key={c} className={`pen-dot${c === color ? " on" : ""}`} style={{ background: MARKER[c] }} aria-label={c} title={c} onClick={() => { setColor(c); setTool("pen"); setPicking(false); }} />)}</span> : null}
+            <button className="pen-dot" style={{ background: markerHex(color) }} onClick={() => setPicking(!picking)} aria-expanded={picking} aria-label={`Sharpie color: ${color}`} title="Sharpie color" />
+            {picking ? <span className="pen-pop">{COLORS.map((c) => <button key={c} className={`pen-dot${c === color ? " on" : ""}`} style={{ background: MARKER[c] }} aria-label={c} title={c} onClick={() => { setColor(c); setTool("pen"); setPicking(false); }} />)}<AnyColor value={color} onPick={(h) => { setColor(h); setTool("pen"); }} title="Any sharpie color" /></span> : null}
           </span>
           <button className={tool === "eraser" ? "on" : ""} aria-pressed={tool === "eraser"} onClick={() => setTool(tool === "eraser" ? null : "eraser")} title="Eraser: click or drag over strokes (E)">Eraser</button>
           <button onClick={() => marks.length && onMarkup(s.id, [])} disabled={!marks.length} title="Remove all markup from this slide">Clear slide</button>

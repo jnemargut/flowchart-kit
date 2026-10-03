@@ -104,14 +104,23 @@
                   "type": "string"
                 },
                 "color": {
-                  "enum": [
-                    "ink",
-                    "grey",
-                    "red",
-                    "blue",
-                    "green",
-                    "yellow",
-                    "none"
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "ink",
+                        "grey",
+                        "red",
+                        "blue",
+                        "green",
+                        "yellow",
+                        "none"
+                      ]
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+                      "description": "Any color as a hex, e.g. \"#e8b04b\"."
+                    }
                   ]
                 },
                 "weight": {
@@ -175,14 +184,23 @@
             "description": "the frame it lives in (leave out for the loose area)"
           },
           "color": {
-            "enum": [
-              "yellow",
-              "pink",
-              "blue",
-              "green",
-              "gray"
+            "anyOf": [
+              {
+                "enum": [
+                  "yellow",
+                  "pink",
+                  "blue",
+                  "green",
+                  "gray"
+                ]
+              },
+              {
+                "type": "string",
+                "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+                "description": "Any color as a hex, e.g. \"#e8b04b\"."
+              }
             ],
-            "description": "stickies: yellow | pink | blue | green | gray (default yellow)"
+            "description": "stickies: yellow | pink | blue | green | gray (default yellow), or any hex like \"#e8b04b\""
           },
           "near": {
             "type": "string",
@@ -257,33 +275,51 @@
             "description": "text size: s | m (default) | l | xl"
           },
           "fill": {
-            "enum": [
-              "white",
-              "paper",
-              "light",
-              "mid",
-              "dark",
-              "yellow",
-              "pink",
-              "blue",
-              "green",
-              "teal",
-              "none"
+            "anyOf": [
+              {
+                "enum": [
+                  "white",
+                  "paper",
+                  "light",
+                  "mid",
+                  "dark",
+                  "yellow",
+                  "pink",
+                  "blue",
+                  "green",
+                  "teal",
+                  "none"
+                ]
+              },
+              {
+                "type": "string",
+                "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+                "description": "Any color as a hex, e.g. \"#e8b04b\"."
+              }
             ],
-            "description": "boxes, pills, decisions, text: white | paper | light | mid | dark | yellow | pink | blue | green | teal | none"
+            "description": "boxes, pills, decisions, text: white | paper | light | mid | dark | yellow | pink | blue | green | teal | none, or any hex like \"#e8b04b\" (a color swatch is a small box with a hex fill)"
           },
           "stroke": {
-            "enum": [
-              "ink",
-              "grey",
-              "red",
-              "blue",
-              "green",
-              "orange",
-              "teal",
-              "none"
+            "anyOf": [
+              {
+                "enum": [
+                  "ink",
+                  "grey",
+                  "red",
+                  "blue",
+                  "green",
+                  "orange",
+                  "teal",
+                  "none"
+                ]
+              },
+              {
+                "type": "string",
+                "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+                "description": "Any color as a hex, e.g. \"#e8b04b\"."
+              }
             ],
-            "description": "border color: ink | grey | red | blue | green | orange | teal | none"
+            "description": "border color: ink | grey | red | blue | green | orange | teal | none, or any hex"
           },
           "weight": {
             "enum": [
@@ -344,16 +380,25 @@
             "description": "arrowheads: \"end\" (default), \"start\", \"both\" or \"none\" (a plain line)"
           },
           "color": {
-            "enum": [
-              "ink",
-              "grey",
-              "red",
-              "blue",
-              "green",
-              "orange",
-              "teal"
+            "anyOf": [
+              {
+                "enum": [
+                  "ink",
+                  "grey",
+                  "red",
+                  "blue",
+                  "green",
+                  "orange",
+                  "teal"
+                ]
+              },
+              {
+                "type": "string",
+                "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+                "description": "Any color as a hex, e.g. \"#e8b04b\"."
+              }
             ],
-            "description": "ink | grey (default) | red | blue | green | orange | teal"
+            "description": "ink | grey (default) | red | blue | green | orange | teal, or any hex"
           },
           "weight": {
             "enum": [
@@ -451,14 +496,23 @@
             "type": "string"
           },
           "color": {
-            "enum": [
-              "ink",
-              "grey",
-              "red",
-              "blue",
-              "green",
-              "yellow",
-              "none"
+            "anyOf": [
+              {
+                "enum": [
+                  "ink",
+                  "grey",
+                  "red",
+                  "blue",
+                  "green",
+                  "yellow",
+                  "none"
+                ]
+              },
+              {
+                "type": "string",
+                "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+                "description": "Any color as a hex, e.g. \"#e8b04b\"."
+              }
             ]
           },
           "weight": {
@@ -505,13 +559,22 @@
               }
             },
             "color": {
-              "enum": [
-                "ink",
-                "grey",
-                "red",
-                "blue",
-                "green",
-                "yellow"
+              "anyOf": [
+                {
+                  "enum": [
+                    "ink",
+                    "grey",
+                    "red",
+                    "blue",
+                    "green",
+                    "yellow"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+                  "description": "Any color as a hex, e.g. \"#e8b04b\"."
+                }
               ]
             }
           }
