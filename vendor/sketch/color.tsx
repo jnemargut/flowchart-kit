@@ -12,6 +12,9 @@ const MAX = 5;
 function recent(): string[] {
   try { const v = JSON.parse(localStorage.getItem(KEY) ?? "[]"); return Array.isArray(v) ? v.filter(isHex).slice(0, MAX) : []; } catch { return []; }
 }
+function forget(hex: string) {
+  try { localStorage.setItem(KEY, JSON.stringify(recent().filter((c) => c.toLowerCase() !== hex.toLowerCase()))); window.dispatchEvent(new Event(KEY)); } catch { /* fine */ }
+}
 function remember(hex: string) {
   try { localStorage.setItem(KEY, JSON.stringify([hex, ...recent().filter((c) => c.toLowerCase() !== hex.toLowerCase())].slice(0, MAX))); window.dispatchEvent(new Event(KEY)); } catch { /* private window: fine */ }
 }
@@ -44,9 +47,10 @@ export function AnyColor({ value, onPick, square, title = "Any color" }: { value
   const shown = cur && !list.some((c) => c.toLowerCase() === cur.toLowerCase()) ? [cur, ...list] : list;
   const ED = dropper();
   return (
-    <span ref={wrap} style={{ position: "relative", display: "inline-flex", gap: 2 }} onPointerDown={(e) => e.stopPropagation()}>
+    <span ref={wrap} style={{ position: "relative", display: "inline-flex", flexWrap: "wrap", gap: 2, maxWidth: "100%" }} onPointerDown={(e) => e.stopPropagation()}>
       {shown.slice(0, MAX).map((c) => (
-        <button key={c} type="button" title={c} aria-label={c} className={cur && c.toLowerCase() === cur.toLowerCase() ? "on" : ""} style={btn} onClick={() => pick(c)}><span style={dot(c, square)} /></button>
+        <button key={c} type="button" title={`${c} (Option-click to forget it)`} aria-label={c} className={cur && c.toLowerCase() === cur.toLowerCase() ? "on" : ""} style={btn}
+          onClick={(e) => (e.altKey ? forget(c) : pick(c))}><span style={dot(c, square)} /></button>
       ))}
       <button type="button" title={title} aria-label={title} aria-expanded={open} style={btn} onClick={() => setOpen(!open)}>
         <span style={{ ...dot("conic-gradient(#d9363e, #f7c948, #2f9e44, #2f6fd0, #9b4dca, #d9363e)", square), position: "relative" }}>

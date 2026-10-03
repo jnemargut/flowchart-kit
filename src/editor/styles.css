@@ -103,7 +103,7 @@ button, select, input, textarea { font: inherit; color: inherit; }
 .color-pop { position: absolute; left: 42px; bottom: 0; display: flex; gap: 2px; background: var(--color-paper); border: 2px solid var(--color-ink); padding: 4px; box-shadow: var(--shadow-l2); }
 .color-pop button { width: 30px; height: 30px; display: grid; place-items: center; background: none; border: none; cursor: pointer; }
 .color-pop button.on, .swatches button.on { outline: 2px solid var(--color-product); outline-offset: -2px; }
-.swatches { display: flex; gap: 2px; }
+.swatches { display: flex; flex-wrap: wrap; gap: 2px; max-width: 100%; }
 .swatches button { width: 28px; height: 28px; display: grid; place-items: center; background: none; border: none; cursor: pointer; }
 /* icon picker, geometry */
 .icon-picker { position: relative; display: block; }
