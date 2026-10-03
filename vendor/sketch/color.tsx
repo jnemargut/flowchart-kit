@@ -3,7 +3,8 @@
  * browsers that have one) a dropper that picks any pixel on screen. Colors you've used come back as dots.
  * Values are stored as "#rrggbb", which every kit's renderer and checker accept next to its named colors.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { isHex, normHex } from "./tokens";
 
 const KEY = "sketch:recent-colors";
@@ -34,11 +35,30 @@ export function AnyColor({ value, onPick, square, title = "Any color" }: { value
   const [list, setList] = useState<string[]>(recent);
   const [draft, setDraft] = useState(isHex(value) ? normHex(value!) : "");
   const wrap = useRef<HTMLSpanElement>(null);
+  const plus = useRef<HTMLButtonElement>(null);
+  const pop = useRef<HTMLSpanElement>(null);
+  // the picker floats over the page (not inside a scrolling panel that would clip it), kept inside the window
+  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!open) { setAt(null); return; }
+    const place = () => {
+      const b = plus.current?.getBoundingClientRect(), p = pop.current?.getBoundingClientRect();
+      if (!b) return;
+      const w = p?.width ?? 200, h = p?.height ?? 44;
+      const left = Math.max(8, Math.min(b.right - w, window.innerWidth - w - 8));
+      const top = b.bottom + 4 + h > window.innerHeight - 8 ? b.top - 4 - h : b.bottom + 4;
+      setAt({ left, top });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => { window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); };
+  }, [open]);
   useEffect(() => { const f = () => setList(recent()); window.addEventListener(KEY, f); return () => window.removeEventListener(KEY, f); }, []);
   useEffect(() => { if (isHex(value)) setDraft(normHex(value!)); }, [value]);
   useEffect(() => {
     if (!open) return;
-    const close = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
+    const close = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node) && !pop.current?.contains(e.target as Node)) setOpen(false); };
     window.addEventListener("pointerdown", close, true);
     return () => window.removeEventListener("pointerdown", close, true);
   }, [open]);
@@ -52,13 +72,13 @@ export function AnyColor({ value, onPick, square, title = "Any color" }: { value
         <button key={c} type="button" title={`${c} (Option-click to forget it)`} aria-label={c} className={cur && c.toLowerCase() === cur.toLowerCase() ? "on" : ""} style={btn}
           onClick={(e) => (e.altKey ? forget(c) : pick(c))}><span style={dot(c, square)} /></button>
       ))}
-      <button type="button" title={title} aria-label={title} aria-expanded={open} style={btn} onClick={() => setOpen(!open)}>
+      <button ref={plus} type="button" title={title} aria-label={title} aria-expanded={open} style={btn} onClick={() => setOpen(!open)}>
         <span style={{ ...dot("conic-gradient(#d9363e, #f7c948, #2f9e44, #2f6fd0, #9b4dca, #d9363e)", square), position: "relative" }}>
           <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "#fff", fontSize: 14, fontWeight: 700, lineHeight: 1, textShadow: "0 0 2px #000" }}>+</span>
         </span>
       </button>
-      {open ? (
-        <span role="dialog" aria-label="Pick any color" style={{ position: "absolute", zIndex: 50, top: 32, right: 0, display: "flex", gap: 6, alignItems: "center", background: "var(--color-paper, #fbfaf7)", border: "2px solid var(--color-ink, #1c1c1e)", padding: 6, boxShadow: "3px 4px 0 rgba(0,0,0,0.18)", whiteSpace: "nowrap" }}>
+      {open ? createPortal(
+        <span ref={pop} role="dialog" aria-label="Pick any color" onPointerDown={(e) => e.stopPropagation()} style={{ position: "fixed", zIndex: 1000, left: at?.left ?? -9999, top: at?.top ?? -9999, display: "flex", gap: 6, alignItems: "center", background: "var(--color-paper, #fbfaf7)", border: "2px solid var(--color-ink, #1c1c1e)", padding: 6, boxShadow: "3px 4px 0 rgba(0,0,0,0.18)", whiteSpace: "nowrap" }}>
           <input type="color" aria-label="Color picker" value={isHex(draft) ? normHex(draft) : "#e8b04b"} onChange={(e) => pick(e.target.value)} style={{ width: 32, height: 28, padding: 0, border: "none", background: "none", cursor: "pointer" }} />
           <input aria-label="Hex color" placeholder="#e8b04b" value={draft} size={8} spellCheck={false}
             onChange={(e) => setDraft(e.target.value)}
@@ -71,7 +91,8 @@ export function AnyColor({ value, onPick, square, title = "Any color" }: { value
               <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4.5l5 5M17 2.5a2.1 2.1 0 0 1 3 3l-3 3-3-3z M14 6.5L5.5 15 4 20l5-1.5L17.5 10" /></svg>
             </button>
           ) : null}
-        </span>
+        </span>,
+        document.body,
       ) : null}
     </span>
   );
