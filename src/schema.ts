@@ -49,6 +49,8 @@ export function buildSchema() {
             ref: { type: "string", description: NODE_PROPS.ref },
             url: { type: "string", description: NODE_PROPS.url },
             sketch: { type: "boolean", description: NODE_PROPS.sketch },
+            mirror: { type: "boolean", description: NODE_PROPS.mirror },
+            turn: { enum: [0, 90, 180, 270], description: NODE_PROPS.turn },
             crop: { type: "array", items: { type: "number", minimum: 0, maximum: 1 }, minItems: 4, maxItems: 4, description: NODE_PROPS.crop },
             product: { type: "boolean", description: NODE_PROPS.product },
             size: { enum: [...TEXT_SIZES], description: NODE_PROPS.size },
@@ -62,7 +64,7 @@ export function buildSchema() {
         type: "array",
         items: {
           type: "object", required: ["from", "to"], additionalProperties: false,
-          properties: { from: { type: "string", description: LINK_PROPS.from }, to: { type: "string", description: LINK_PROPS.to }, label: { type: "string", description: LINK_PROPS.label }, style: { enum: [...LINK_STYLES], description: LINK_PROPS.style }, shape: { enum: [...CONNECTORS], description: LINK_PROPS.shape }, head: { enum: [...HEADS], description: LINK_PROPS.head }, color: { anyOf: [{ enum: LINE_COLOR_NAMES.filter((c) => c !== "none") }, { type: "string", pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", description: "Any color as a hex, e.g. \"#e8b04b\"." }], description: LINK_PROPS.color }, weight: { enum: [...WEIGHTS], description: LINK_PROPS.weight }, fromSide: { enum: [...SIDES4], description: LINK_PROPS.fromSide }, toSide: { enum: [...SIDES4], description: LINK_PROPS.toSide }, bend: { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2, description: LINK_PROPS.bend } },
+          properties: { from: { type: "string", description: LINK_PROPS.from }, to: { type: "string", description: LINK_PROPS.to }, label: { type: "string", description: LINK_PROPS.label }, style: { enum: [...LINK_STYLES], description: LINK_PROPS.style }, shape: { enum: [...CONNECTORS], description: LINK_PROPS.shape }, head: { enum: [...HEADS], description: LINK_PROPS.head }, color: { anyOf: [{ enum: LINE_COLOR_NAMES.filter((c) => c !== "none") }, { type: "string", pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", description: "Any color as a hex, e.g. \"#e8b04b\"." }], description: LINK_PROPS.color }, weight: { enum: [...WEIGHTS], description: LINK_PROPS.weight }, fromSide: { enum: [...SIDES4], description: LINK_PROPS.fromSide }, toSide: { enum: [...SIDES4], description: LINK_PROPS.toSide }, bend: { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2, description: LINK_PROPS.bend }, size: { enum: [...TEXT_SIZES], description: LINK_PROPS.size } },
         },
       },
       present: { type: "array", items: { type: "string" }, description: "Frame ids in presenting order." },

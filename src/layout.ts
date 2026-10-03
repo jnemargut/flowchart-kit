@@ -1,3 +1,4 @@
+import { normTurn } from "../vendor/sketch/crop";
 /**
  * Where everything goes. Each frame's flow is laid out by dagre; stickies and text with `near` sit beside their
  * node; everything else in the frame lines up in a grid under the flow. Frames go where the file says
@@ -5,7 +6,7 @@
  * Pure and synchronous: the CLI, the exports and the editor all get the same answer.
  */
 import dagre from "@dagrejs/dagre";
-import { shapeBox, type SketchShape } from "../vendor/sketch/shapes";
+import { shapeBox, type SketchShape, shapeTextSize } from "../vendor/sketch/shapes";
 import { textWidth, wrap } from "./text";
 import { frameOf, isNote, typeOf, type Cards, type FlowchartFile, type FNode, type NodeType, type Side } from "./types";
 
@@ -17,6 +18,8 @@ export interface Edge {
   start: [number, number]; startAngle: number; end: [number, number]; angle: number;
   label?: string; lx: number; ly: number; lw: number;
   style: "solid" | "dashed" | "dotted"; head: "end" | "start" | "both" | "none"; color?: string; weight?: string;
+  /** Label font size. */
+  ls: number;
 }
 export interface BoardLayout { nodes: Record<string, NodeBox>; frames: Record<string, FrameBox>; edges: Edge[]; bounds: Box }
 
@@ -27,6 +30,9 @@ export const FRAME_GAP = 120;
 const NOTE_GAP = 18;
 const STEP = 40;
 const LABEL_SIZE = 16;
+/** An arrow label's font size: s | m (default) | l | xl. */
+export const LABEL_SIZES: Record<string, number> = { s: 13, m: 16, l: 21, xl: 28 };
+const labelSize = (l?: { size?: string }) => LABEL_SIZES[l?.size ?? "m"] ?? LABEL_SIZE;
 
 const SIZE: Record<string, number> = { s: 14, m: 18, l: 24, xl: 32 };
 const TEXT_SIZE: Record<string, number> = { s: 16, m: 20, l: 28, xl: 40 };
@@ -59,7 +65,10 @@ export function measure(n: FNode, nudge: { w?: number; h?: number } = {}, card?:
   if (t === "card") {
     const label = card?.label ?? n.ref ?? "";
     const cr = Array.isArray(n.crop) && n.crop.length === 4 ? n.crop : [0, 0, 1, 1];
-    const iw = card?.w ? card.w * Math.max(0.01, cr[2] - cr[0]) : undefined, ih = card?.h ? card.h * Math.max(0.01, cr[3] - cr[1]) : undefined;
+    const cw = card?.w ? card.w * Math.max(0.01, cr[2] - cr[0]) : undefined, chh = card?.h ? card.h * Math.max(0.01, cr[3] - cr[1]) : undefined;
+    // a picture turned a quarter turn is the other way round
+    const side = card?.kind === "image" && (normTurn(n.turn) === 90 || normTurn(n.turn) === 270);
+    const iw = side ? chh : cw, ih = side ? cw : chh;
     let w: number, imgH: number;
     if (iw && ih) {
       const tall = ih > iw;
@@ -287,7 +296,7 @@ function layoutFrame(doc: FlowchartFile, fid: string, ids: string[], cards: Card
     g.setGraph({ rankdir: down ? "TB" : "LR", nodesep: down ? 50 : 40, ranksep: down ? 64 : 84, edgesep: 24, marginx: 0, marginy: 0 });
     g.setDefaultEdgeLabel(() => ({}));
     for (const id of flowIds) g.setNode(id, { width: sizes[id].w, height: sizes[id].h });
-    for (const l of links) g.setEdge(l.from, l.to, l.label ? { width: textWidth(l.label, "hand", LABEL_SIZE) + 14, height: 24, labelpos: "c" } : {}, `e${l.i}`);
+    for (const l of links) g.setEdge(l.from, l.to, l.label ? { width: textWidth(l.label, "hand", labelSize(l)) + 14, height: labelSize(l) + 8, labelpos: "c" } : {}, `e${l.i}`);
     dagre.layout(g);
     for (const id of flowIds) { const n = g.node(id); put(id, Math.round(n.x - n.width / 2 + left), Math.round(n.y - n.height / 2 + top)); }
     for (const l of links) {
@@ -344,7 +353,7 @@ function layoutFrame(doc: FlowchartFile, fid: string, ids: string[], cards: Card
   for (const [i, pts] of Object.entries(dagreEdges)) {
     for (let k = 0; k < pts.length - 1; k++) for (let t = 0; t <= 1; t += 0.25) obstacles.push({ x: pts[k][0] + (pts[k + 1][0] - pts[k][0]) * t - 4, y: pts[k][1] + (pts[k + 1][1] - pts[k][1]) * t - 4, w: 8, h: 8 });
     const lab = labelAt[Number(i)], l = links.find((x) => x.i === Number(i));
-    if (lab && l?.label) { const lw = textWidth(l.label, "hand", LABEL_SIZE) + 14; obstacles.push({ x: lab[0] - lw / 2, y: lab[1] - 13, w: lw, h: 26 }); }
+    if (lab && l?.label) { const lw = textWidth(l.label, "hand", labelSize(l)) + 14, lh = labelSize(l) + 10; obstacles.push({ x: lab[0] - lw / 2, y: lab[1] - lh / 2, w: lw, h: lh }); }
   }
   // notes beside their node: above, then below, right, left; whichever is free first
   for (const id of attached) {
@@ -401,22 +410,23 @@ function sidesUsed(b: NodeBox, edges: Edge[]): Set<SideName> {
   return out;
 }
 
-export const labelBox = (e: Edge): Box => ({ x: e.lx - e.lw / 2, y: e.ly - 13, w: e.lw, h: 26 });
+export const labelBox = (e: Edge): Box => ({ x: e.lx - e.lw / 2, y: e.ly - (e.ls + 10) / 2, w: e.lw, h: e.ls + 10 });
 
 /** A drawing's extent, text included. */
 export function shapeBounds(s: SketchShape): Box {
   const b = shapeBox(s);
   if (s.type !== "text") return b;
   const lines = (s.text ?? "").split("\n");
-  const w = Math.max(24, ...lines.map((l) => l.length * 16 * 0.45)) + 8, h = lines.length * 19.2 + 6;
+  const fs = shapeTextSize(s);
+  const w = Math.max(24, ...lines.map((l) => l.length * fs * 0.45)) + 8, h = lines.length * fs * 1.2 + 6;
   return { x: b.x - w / 2, y: b.y - h / 2, w, h };
 }
 
-type LinkLike = { from: string; to: string; label?: string; style?: string; head?: string; color?: string; weight?: string; fromSide?: SideName; toSide?: SideName; shape?: "curved" | "angled" | "straight"; bend?: [number, number] };
-const looks = (l: LinkLike) => ({ style: (l.style === "dashed" || l.style === "dotted" ? l.style : "solid") as Edge["style"], head: (["start", "both", "none"].includes(l.head ?? "") ? l.head : "end") as Edge["head"], color: l.color, weight: l.weight });
+type LinkLike = { from: string; to: string; label?: string; size?: string; style?: string; head?: string; color?: string; weight?: string; fromSide?: SideName; toSide?: SideName; shape?: "curved" | "angled" | "straight"; bend?: [number, number] };
+const looks = (l: LinkLike) => ({ ls: labelSize(l), style: (l.style === "dashed" || l.style === "dotted" ? l.style : "solid") as Edge["style"], head: (["start", "both", "none"].includes(l.head ?? "") ? l.head : "end") as Edge["head"], color: l.color, weight: l.weight });
 
 function edgeFor(i: number, l: LinkLike, a: NodeBox, b: NodeBox, pts?: [number, number][], lab?: [number, number], busy?: [Set<SideName>, Set<SideName>], o: RouteOpts = {}): Edge {
-  const lw = l.label ? textWidth(l.label, "hand", LABEL_SIZE) + 14 : 0;
+  const lw = l.label ? textWidth(l.label, "hand", labelSize(l)) + 14 : 0;
   const forced = l.fromSide || l.toSide || o.fromSide || o.toSide || o.fromOff || o.toOff || (l.shape && l.shape !== "curved");
   // dagre's path only for arrows that detour around other boxes; short hops leave from the middle of a side
   if (pts && pts.length > 3 && !forced) {

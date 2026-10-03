@@ -250,6 +250,19 @@
             "type": "boolean",
             "description": "image cards: false shows the picture as it is (default: sketchified in grays to match)"
           },
+          "mirror": {
+            "type": "boolean",
+            "description": "image cards: true flips the picture left to right"
+          },
+          "turn": {
+            "enum": [
+              0,
+              90,
+              180,
+              270
+            ],
+            "description": "image cards: turn the picture clockwise, 90 | 180 | 270"
+          },
           "crop": {
             "type": "array",
             "items": {
@@ -434,6 +447,15 @@
             "minItems": 2,
             "maxItems": 2,
             "description": "[dx, dy]: pulls the arrow's middle that far from where the layout puts it, to route around things. Editor-owned: the designer drags the arrow's middle handle. Leave it out."
+          },
+          "size": {
+            "enum": [
+              "s",
+              "m",
+              "l",
+              "xl"
+            ],
+            "description": "the label's text size: s | m (default) | l | xl"
           }
         }
       }

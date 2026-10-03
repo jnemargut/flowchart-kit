@@ -24,6 +24,10 @@ export interface FNode {
   ref?: string;
   /** Cards: show only part of the picture, as fractions [left, top, right, bottom] (the original stays as it is). */
   crop?: [number, number, number, number];
+  /** Image cards: flip the picture left to right. */
+  mirror?: boolean;
+  /** Image cards: turn the picture clockwise, 90, 180 or 270. */
+  turn?: number;
   /** Image cards: false shows the picture as it is, instead of sketchified in grays. */
   sketch?: boolean;
   /** A web address (a site, a ticket, a prototype). Link cards show it; anything else gets a little link badge you can click. */
@@ -78,6 +82,8 @@ export interface Link {
   /** Which side of each box it leaves and arrives on. Leave out and the layout picks. */
   fromSide?: Side4;
   toSide?: Side4;
+  /** The label's text size: s, m (default), l, xl. */
+  size?: "s" | "m" | "l" | "xl";
   /** Pull the arrow's middle by [dx, dy] from where the layout puts it, to route it around things. The editor writes this when you drag the handle on a selected arrow. */
   bend?: [number, number];
 }

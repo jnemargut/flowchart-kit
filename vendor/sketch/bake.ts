@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
-import { fullCrop, isCrop, type Crop } from "./crop";
+import { fullCrop, isCrop, isPlain, normTurn, type Crop, type Orient } from "./crop";
 import { renderPNG } from "./resvg";
 
-export { isCrop, splitCrop, withCrop, type Crop } from "./crop";
+export { isCrop, isPlain, normTurn, splitCrop, splitFix, withCrop, withOrient, type Crop, type Orient } from "./crop";
 
 export const MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif" };
 
@@ -73,28 +73,45 @@ export function cropBytes(buf: Buffer, mime: string, crop?: Crop): { buf: Buffer
   return { buf: renderPNG(svg), mime: "image/png" };
 }
 
-/** An image file, cropped (cached next to the other baked pictures). */
-export function croppedImage(absPath: string, cacheDir: string, crop?: Crop): { buf: Buffer; mime: string } {
+/** Mirror a picture left to right and/or turn it clockwise. Returns PNG bytes (or the original when it's plain). */
+export function orientBytes(buf: Buffer, mime: string, o?: Orient): { buf: Buffer; mime: string } {
+  if (isPlain(o)) return { buf, mime };
+  const size = imageSize(buf);
+  if (!size) return { buf, mime };
+  const t = normTurn(o!.turn), side = t === 90 || t === 270;
+  const W = side ? size.h : size.w, H = side ? size.w : size.h;
+  // center the picture, turn it, mirror it (so "mirror" always means left-right as you see it)
+  const tf = `translate(${W / 2} ${H / 2}) ${o!.mirror ? "scale(-1 1) " : ""}rotate(${o!.mirror ? -t : t}) translate(${-size.w / 2} ${-size.h / 2})`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><g transform="${tf}"><image href="data:${mime};base64,${buf.toString("base64")}" width="${size.w}" height="${size.h}"/></g></svg>`;
+  return { buf: renderPNG(svg), mime: "image/png" };
+}
+
+/** An image file, cropped and then mirrored or turned (cached next to the other baked pictures). */
+export function croppedImage(absPath: string, cacheDir: string, crop?: Crop, orient?: Orient): { buf: Buffer; mime: string } {
   const mime = MIME[extname(absPath).toLowerCase()] ?? "image/png";
-  if (fullCrop(crop) || !isCrop(crop)) return { buf: readFileSync(absPath), mime };
+  const noCrop = fullCrop(crop) || !isCrop(crop);
+  if (noCrop && isPlain(orient)) return { buf: readFileSync(absPath), mime };
   const st = statSync(absPath);
-  const key = createHash("sha1").update(`${absPath}:${st.mtimeMs}:${st.size}:crop:${crop.join(",")}`).digest("hex").slice(0, 12);
+  const key = createHash("sha1").update(`${absPath}:${st.mtimeMs}:${st.size}:crop:${noCrop ? "" : crop!.join(",")}${orientKey(orient)}`).digest("hex").slice(0, 12);
   const out = join(cacheDir, `${basename(absPath, extname(absPath))}-crop-${key}.png`);
   if (existsSync(out)) return { buf: readFileSync(out), mime: "image/png" };
-  const r = cropBytes(readFileSync(absPath), mime, crop);
+  const c = cropBytes(readFileSync(absPath), mime, crop);
+  const r = orientBytes(c.buf, c.mime, orient);
   mkdirSync(cacheDir, { recursive: true });
   writeFileSync(out, r.buf);
   return r;
 }
 
+const orientKey = (o?: Orient) => (isPlain(o) ? "" : `:m${o!.mirror ? 1 : 0}:t${normTurn(o!.turn)}`);
+
 /** Bake (or fetch from cache) the sketchified version of an image file, optionally cropped. Returns PNG bytes. Call initRenderer() first. */
-export function bakeImage(absPath: string, cacheDir: string, roughness = 1, mode: BakeMode = "teal", crop?: Crop): Buffer {
+export function bakeImage(absPath: string, cacheDir: string, roughness = 1, mode: BakeMode = "teal", crop?: Crop, orient?: Orient): Buffer {
   const st = statSync(absPath);
-  const cropKey = fullCrop(crop) || !isCrop(crop) ? "" : `:crop:${crop.join(",")}`;
+  const cropKey = (fullCrop(crop) || !isCrop(crop) ? "" : `:crop:${crop.join(",")}`) + orientKey(orient);
   const key = createHash("sha1").update(`${absPath}:${st.mtimeMs}:${st.size}:${roughness}:${mode === "teal" ? "v1" : `${mode}-v2`}${cropKey}`).digest("hex").slice(0, 12);
   const out = join(cacheDir, `${basename(absPath, extname(absPath))}-${key}.png`);
   if (existsSync(out)) return readFileSync(out);
-  const src = croppedImage(absPath, cacheDir, crop);
+  const src = croppedImage(absPath, cacheDir, crop, orient);
   const buf = src.buf;
   const size = imageSize(buf) ?? { w: 390, h: 844 };
   const scale = Math.min(1, MAX_BAKE_W / size.w);

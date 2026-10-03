@@ -190,6 +190,8 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
         <Actions a={a}>
           {t === "card" && !n.ref ? <button className="btn dark" onClick={() => a.chooseImage(id)}>Choose image…</button> : null}
           {t === "card" && card?.png ? <button className="btn" onClick={() => a.crop(id)} title="Show only part of the picture">{n.crop ? "Change crop…" : "Crop…"}</button> : null}
+          {t === "card" && cardKind === "image" ? <button className={`btn${n.mirror ? " on" : ""}`} aria-pressed={!!n.mirror} onClick={() => a.set(P("mirror"), n.mirror ? undefined : true)} title="Flip the picture left to right">Mirror</button> : null}
+          {t === "card" && cardKind === "image" ? <button className="btn" onClick={() => a.set(P("turn"), ((n.turn ?? 0) + 90) % 360 || undefined)} title="Turn the picture a quarter turn clockwise">Turn ↻</button> : null}
           {cardKind ? <button className="btn dark" onClick={() => a.openCard(n.ref!)}>{cardKind === "image" ? "Open the picture" : `Edit in ${KIT[cardKind]}`}</button> : null}
           {n.url && /^https?:\/\//.test(n.url) ? <a className="btn" href={n.url} target="_blank" rel="noreferrer">Open {hostOf(n.url)}</a> : null}
           {nudged ? <button className="btn" onClick={() => a.resetNudge(id)}>Back to auto layout</button> : null}
@@ -239,6 +241,7 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
         <h3>Arrow</h3>
         <p className="doc"><button className="linkish" onClick={() => a.select([`node:${l.from}`])}>{plainText(doc.nodes[l.from]?.text ?? l.from)}</button> → <button className="linkish" onClick={() => a.select([`node:${l.to}`])}>{plainText(doc.nodes[l.to]?.text ?? l.to)}</button></p>
         <Field label="Label" wide><Text value={l.label ?? ""} focusKey={focusText} placeholder="yes, no, after 10 min…" onChange={(v) => a.set(["links", i, "label"], v || undefined, `label:${i}`)} /></Field>
+        {l.label ? <Field label="Label size" wide><Seg value={l.size ?? "m"} options={TEXT_SIZES} labels={TEXT_SIZE_LABEL} onChange={(v) => a.set(["links", i, "size"], v === "m" ? undefined : v)} /></Field> : null}
         <Field label="Shape" wide><Seg value={l.shape ?? doc.connectors ?? "curved"} options={CONNECTORS} labels={{ curved: "Curved", angled: "Angled", straight: "Straight" }} onChange={(v) => a.set(["links", i, "shape"], v === (doc.connectors ?? "curved") ? undefined : v)} /></Field>
         <Field label="Line" wide><Seg value={l.style ?? "solid"} options={LINK_STYLES} labels={{ solid: "Solid", dashed: "Dashed", dotted: "Dotted" }} onChange={(v) => a.set(["links", i, "style"], v === "solid" ? undefined : v)} /></Field>
         <Field label="Ends" wide><Seg value={l.head ?? "end"} options={HEADS} labels={{ end: "→", start: "←", both: "↔", none: "None" }} onChange={(v) => a.set(["links", i, "head"], v === "end" ? undefined : v)} /></Field>
@@ -264,7 +267,9 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
       <aside className="inspector">
         <h3>Drawing<small>{s.type}</small></h3>
         {s.type === "text" ? <Field label="Words" wide><Text area value={s.text ?? ""} focusKey={focusText} onChange={(v) => a.set([...path, "text"], v, `stext:${key}`)} /></Field> : null}
+        {s.type === "text" ? <Field label="Text size" wide><Seg value={s.size ?? "m"} options={TEXT_SIZES} labels={TEXT_SIZE_LABEL} onChange={(v) => a.set([...path, "size"], v === "m" ? undefined : v)} /></Field> : null}
         <Field label="Color"><span className="swatches">{COLORS.map((c) => <button key={c} title={c} aria-label={c} className={(s.color ?? "ink") === c ? "on" : ""} onClick={() => a.set([...path, "color"], c === "ink" ? undefined : c)}><span className="dot" style={{ background: MARKER[c] }} /></button>)}<AnyColor value={s.color} onPick={(h) => a.set([...path, "color"], h)} /></span></Field>
+        {s.type !== "text" ? <Field label="Line" wide><Seg value={s.weight ?? "normal"} options={WEIGHTS} labels={WEIGHT_LABEL} onChange={(v) => a.set([...path, "weight"], v === "normal" ? undefined : v)} /></Field> : null}
         {s.type === "rect" || s.type === "ellipse" || s.type === "path" ? (
           <Field label="Fill"><span className="seg">{(["none", "light", "mid", "dark"] as const).map((f) => <button key={f} className={(s.fill ?? "none") === f ? "on" : ""} onClick={() => a.set([...path, "fill"], f === "none" ? undefined : f)}>{f}</button>)}</span></Field>
         ) : null}

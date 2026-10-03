@@ -11,10 +11,10 @@ import type { StickyColor } from "./types";
 
 export type { Result };
 
-const NODE_KEYS = ["type", "text", "frame", "color", "near", "icon", "at", "ref", "url", "sketch", "crop", "product", "size", "fill", "stroke", "weight"];
+const NODE_KEYS = ["type", "text", "frame", "color", "near", "icon", "at", "ref", "url", "sketch", "crop", "mirror", "turn", "product", "size", "fill", "stroke", "weight"];
 const FRAME_KEYS = ["title", "near", "dir", "notes", "url", "shapes", "size"];
 const okUrl = (u: unknown) => typeof u === "string" && /^(https?:\/\/|mailto:|figma:|file:|\.{0,2}\/)\S+$/i.test(u.trim());
-const LINK_KEYS = ["from", "to", "label", "style", "shape", "head", "color", "weight", "fromSide", "toSide", "bend"];
+const LINK_KEYS = ["from", "to", "label", "style", "shape", "head", "color", "weight", "fromSide", "toSide", "bend", "size"];
 /** One of a fixed set, with a "did you mean". */
 const pick = (err: (p: string, m: string, h?: string) => void, path: string, v: unknown, options: readonly string[], what: string, hex = false) => {
   if (v === undefined || (hex && isHex(v))) return;
@@ -94,6 +94,9 @@ export function validate(doc: FlowchartFile): Result {
     if (n.crop !== undefined && !isCrop(n.crop)) err(`${p}.crop`, '"crop" is [left, top, right, bottom], fractions from 0 to 1.', 'e.g. "crop": [0, 0.1, 1, 0.6] keeps the top half (minus a sliver).');
     if (n.crop !== undefined && t !== "card") warn(`${p}.crop`, `"crop" only applies to cards.`);
     if (n.sketch !== undefined && (t !== "card" || !n.ref || parseRef(n.ref).kind !== "image")) warn(`${p}.sketch`, `"sketch" only applies to image cards.`);
+    for (const k of ["mirror", "turn"] as const) if (n[k] !== undefined && (t !== "card" || !n.ref || parseRef(n.ref).kind !== "image")) warn(`${p}.${k}`, `"${k}" only applies to image cards.`);
+    if (n.mirror !== undefined && typeof n.mirror !== "boolean") err(`${p}.mirror`, "must be true or false.");
+    if (n.turn !== undefined && ![0, 90, 180, 270].includes(n.turn as number)) err(`${p}.turn`, "must be 0, 90, 180 or 270 (clockwise).");
     pick(err, `${p}.size`, n.size, TEXT_SIZES, "text size");
     pick(err, `${p}.fill`, n.fill, FILL_NAMES, "fill", true);
     pick(err, `${p}.stroke`, n.stroke, LINE_COLOR_NAMES, "border color", true);
@@ -107,6 +110,7 @@ export function validate(doc: FlowchartFile): Result {
     const p = `links[${i}]`;
     if (!l || typeof l !== "object") { err(p, "A link should be an object.", '{ "from": "a", "to": "b" }'); return; }
     unknownKeys(l, LINK_KEYS, p);
+    pick(err, `${p}.size`, l.size, TEXT_SIZES, "text size");
     if (l.bend !== undefined && !(Array.isArray(l.bend) && l.bend.length === 2 && l.bend.every((v) => typeof v === "number" && isFinite(v)))) err(`${p}.bend`, "must be [dx, dy]: how far to pull the arrow's middle.", "The editor writes it when you drag an arrow's middle handle; leave it out otherwise.");
     for (const end of ["from", "to"] as const) {
       if (!l[end]) err(`${p}.${end}`, `A link needs "${end}".`);

@@ -42,6 +42,8 @@ export function App() {
   const [error, setError] = useState("");
   const [tool, setTool] = useState<DrawTool>("select");
   const [color, setColor] = useState("ink");
+  /** Line thickness for new drawings. */
+  const [weight, setWeight] = useState("normal");
   const [editing, setEditing] = useState<InlineEdit | null>(null);
   const [cropping, setCropping] = useState<string | null>(null);
   const undo = useRef<FlowchartFile[]>([]);
@@ -56,7 +58,13 @@ export function App() {
   const shown = draft ?? doc;
   const L = useMemo(() => (shown ? layoutBoard(shown, cards) : null), [shown, cards]);
   const base = useMemo(() => (doc ? layoutBoard(doc, cards) : null), [doc, cards]);
-  const cardHref = useMemo(() => cardUrl(bust), [bust]);
+  // the picture's address carries how it's drawn (sketchified, crop, mirror, turn): change any and the browser fetches it again
+  const looks = doc ? Object.entries(doc.nodes).filter(([, n]) => n.type === "card").map(([id, n]) => `${id}:${n.sketch === false ? 0 : 1}:${n.crop?.join(",") ?? ""}:${n.mirror ? 1 : 0}:${n.turn ?? 0}`).join("|") : "";
+  const cardHref = useMemo(() => {
+    const base = cardUrl(bust);
+    const by = Object.fromEntries(looks.split("|").filter(Boolean).map((s) => { const i = s.indexOf(":"); return [s.slice(0, i), s.slice(i + 1)]; }));
+    return (id: string) => `${base(id)}${by[id] ? `&l=${encodeURIComponent(by[id])}` : ""}`;
+  }, [bust, looks]);
 
   const flash = (msg: string) => { setToast(msg); window.setTimeout(() => setToast(""), 2200); };
   const takeCards = (c: Cards) => {
@@ -476,7 +484,7 @@ export function App() {
     const f = frameAt(base, points[0][0], points[0][1]);
     const fb = f ? base.frames[f] : undefined;
     const local = fb ? points.map(([x, y]) => [Math.round(x - fb.ox), Math.round(y - fb.oy)] as [number, number]) : points;
-    const shape: SketchShape = { type: kind === "pen" ? "path" : kind, points: local, ...(color !== "ink" ? { color } : {}) };
+    const shape: SketchShape = { type: kind === "pen" ? "path" : kind, points: local, ...(color !== "ink" ? { color } : {}), ...(weight !== "normal" ? { weight } : {}) };
     const b = shapeBox(shape);
     const real = kind === "pen" ? points.length > 2 : b.w + b.h > 6;
     const list = f ? doc.frames?.[f]?.shapes ?? [] : doc.shapes ?? [];
@@ -822,7 +830,7 @@ export function App() {
             onMoveSel={onMoveSel} onResize={onResize} onBend={onBend} onDraw={onDraw} onTextTool={onTextTool} onConnect={onConnect} onDouble={onDouble}
             onDrop={onDrop} onDropFile={onDropFile} onPointer={(x, y) => { pointer.current = { x, y }; }}
             editing={editing} onEditDone={finishEdit} dragging={dragging} setDragging={setDragging} />
-          <Tools tool={tool} setTool={setTool} color={color} setColor={setColor} />
+          <Tools tool={tool} setTool={setTool} color={color} setColor={setColor} weight={weight} setWeight={setWeight} />
           {error ? <div className="banner">{error}</div> : null}
         </div>
         {props ? <Inspector doc={doc} L={base} cards={cards} sel={sel} result={result} a={a} focusText={focusText} /> : null}

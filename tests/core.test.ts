@@ -280,3 +280,32 @@ describe("bent arrows", () => {
     expect(validate(d).errors.map((x) => x.path).join()).toMatch(/bend/);
   });
 });
+
+describe("image cards", () => {
+  it("mirror and turn validate, and a quarter turn makes the card the other way round", () => {
+    const base = { title: "pics", nodes: { pic: { type: "card", ref: "./order-ahead.status.png" } } } as unknown as FlowchartFile;
+    const turned = { ...base, nodes: { pic: { ...base.nodes.pic, mirror: true, turn: 90 } } } as unknown as FlowchartFile;
+    expect(validate(turned).errors).toEqual([]);
+    const cards = { pic: { state: "ok", kind: "image", png: "x.png", w: 400, h: 800, label: "x" } } as never;
+    const a = layoutBoard(base, cards).nodes.pic, b = layoutBoard(turned, cards).nodes.pic;
+    expect(a.h > a.w).toBe(true);
+    expect(b.w > b.h).toBe(true);
+    const bad = { ...base, nodes: { pic: { ...base.nodes.pic, turn: 45 } } } as unknown as FlowchartFile;
+    expect(validate(bad).errors.map((e) => e.path).join()).toMatch(/turn/);
+  });
+});
+
+describe("text sizes", () => {
+  it("arrow labels and text drawings take a size", () => {
+    const d = example();
+    d.links = d.links!.map((l, i) => (i === 0 ? { ...l, label: "after 10 min", size: "xl" as const } : l));
+    d.shapes = [{ type: "text", points: [[100, 100]], text: "Big note", size: "xl" }];
+    expect(validate(d).errors).toEqual([]);
+    const L = layoutBoard(d);
+    expect(L.edges[0].ls).toBeGreaterThan(L.edges[1]?.ls ?? 16);
+    expect(boardSVG(d)).toMatch(/font-size="28"[^>]*>after 10 min|font-size="28"/);
+    const bad = example();
+    bad.links = bad.links!.map((l, i) => (i === 0 ? { ...l, size: "huge" as never } : l));
+    expect(validate(bad).errors.map((e) => e.path).join()).toMatch(/size/);
+  });
+});

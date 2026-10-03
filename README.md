@@ -143,7 +143,7 @@ what's installed.
   blue for ideas, green for what works, gray for parked.
 - **Looks, when you want them.** Text from small to huge, fills (including plain white for covering something up),
   border colors and weights. Arrows can be curved, angled or straight, solid, dashed or dotted, in any color,
-  with an arrowhead at either end, both, or neither. Arrow cutting through something? Select it and drag the
+  with an arrowhead at either end, both, or neither, and labels in four sizes. Arrow cutting through something? Select it and drag the
   round handle in its middle to route it around; double-click the handle to straighten it again.
 - **Stamps.** A click cursor to drop on a screen, a star for the best idea, a smiley, a frown, thumbs up and
   down, a question mark, a flag and a dozen more. Drop one on anything and it sticks to it.
@@ -151,9 +151,11 @@ what's installed.
   a link too, and gets a little badge you click to open it.
 - **Images.** Drop, paste or upload a photo, a screenshot or a whiteboard shot, or drag the Image tile out for an
   empty one to fill in. It's sketchified in grays to match (switch that off if you want the real thing), and
-  **Crop…** shows just the part you want. Cards from the other kits crop too.
+  **Crop…** shows just the part you want, **Mirror** flips it and **Turn** gives it a quarter turn. Cards from
+  the other kits crop too.
 - **Text** wherever you want it, with **bold**, *italic*, underline and ~~strikethrough~~ (Cmd+B, Cmd+I, Cmd+U).
-- **Drawing.** A pen, boxes, ovals, lines, arrows and free text in six marker colors, or any color you pick. Draw swimlanes inside a
+- **Drawing.** A pen, boxes, ovals, lines, arrows and free text in six marker colors (or any color you pick), thin,
+  normal or thick, and text in four sizes. Draw swimlanes inside a
   frame and they move with it.
 
 ## The editor bits

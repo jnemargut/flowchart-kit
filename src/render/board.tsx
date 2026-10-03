@@ -171,7 +171,7 @@ export function EdgeArt({ e, highlight, wob }: { e: Edge; highlight?: boolean; w
 
 /** Arrow labels go on after every arrow, so no line runs over a word. */
 export const EdgeLabel = ({ e, highlight }: { e: Edge; highlight?: boolean }) => e.label
-  ? <text data-edge={e.i} x={e.lx} y={e.ly + 5} textAnchor="middle" fontFamily={HAND} fontSize={16} fill={highlight ? C.action : C.g8} stroke={C.paper} strokeWidth={6} strokeLinejoin="round" paintOrder="stroke">{richLines(e.label, [plainText(e.label)], highlight ? C.action : C.g8, 16)[0]}</text>
+  ? <text data-edge={e.i} x={e.lx} y={e.ly + e.ls * 0.32} textAnchor="middle" fontFamily={HAND} fontSize={e.ls} fill={highlight ? C.action : C.g8} stroke={C.paper} strokeWidth={6} strokeLinejoin="round" paintOrder="stroke">{richLines(e.label, [plainText(e.label)], highlight ? C.action : C.g8, e.ls)[0]}</text>
   : null;
 
 function FrameArt({ f, wob }: { f: BoardLayout["frames"][string]; wob?: string }) {

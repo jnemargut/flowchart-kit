@@ -25,11 +25,13 @@ export function cardHrefs(file: string, doc?: FlowchartFile) {
     if (!info.png) return undefined;
     const raw = info.kind !== "image" || doc?.nodes[id]?.sketch === false;
     const crop = doc?.nodes[id]?.crop;
-    const k = `${info.png}:${raw}:${crop?.join(",") ?? ""}`;
+    const node = doc?.nodes[id];
+    const orient = info.kind === "image" && node && (node.mirror || node.turn) ? { mirror: node.mirror === true, turn: node.turn ?? 0 } : undefined;
+    const k = `${info.png}:${raw}:${crop?.join(",") ?? ""}:${orient ? `${orient.mirror}${orient.turn}` : ""}`;
     if (memo.has(k)) return memo.get(k);
     let uri: string | undefined;
     try {
-      const pic = raw ? croppedImage(info.png, cacheDirFor(file), crop) : { buf: bakeImage(info.png, cacheDirFor(file), 1, "grey", crop), mime: "image/png" };
+      const pic = raw ? croppedImage(info.png, cacheDirFor(file), crop, orient) : { buf: bakeImage(info.png, cacheDirFor(file), 1, "grey", crop, orient), mime: "image/png" };
       uri = `data:${pic.mime};base64,${pic.buf.toString("base64")}`;
     } catch { uri = undefined; }
     memo.set(k, uri);

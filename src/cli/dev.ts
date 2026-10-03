@@ -94,7 +94,8 @@ export async function dev(file: string, o: DevOptions) {
         const full = url.searchParams.get("full") === "1";
         const raw = full || c.kind !== "image" || node?.sketch === false;
         const crop = full ? undefined : node?.crop;
-        const pic = raw ? croppedImage(c.png, cacheDirFor(abs), crop) : { buf: bakeImage(c.png, cacheDirFor(abs), 1, "grey", crop), mime: "image/png" };
+        const orient = full || c.kind !== "image" ? undefined : { mirror: node?.mirror === true, turn: node?.turn ?? 0 };
+        const pic = raw ? croppedImage(c.png, cacheDirFor(abs), crop, orient) : { buf: bakeImage(c.png, cacheDirFor(abs), 1, "grey", crop, orient), mime: "image/png" };
         res.writeHead(200, { "content-type": pic.mime, "cache-control": "no-cache" });
         return res.end(pic.buf);
       }

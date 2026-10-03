@@ -47,7 +47,7 @@ export function AnyColor({ value, onPick, square, title = "Any color" }: { value
   const shown = cur && !list.some((c) => c.toLowerCase() === cur.toLowerCase()) ? [cur, ...list] : list;
   const ED = dropper();
   return (
-    <span ref={wrap} style={{ position: "relative", display: "inline-flex", flexWrap: "wrap", gap: 2, maxWidth: "100%" }} onPointerDown={(e) => e.stopPropagation()}>
+    <span ref={wrap} style={{ position: "relative", display: "inline-flex", flexShrink: 0, gap: 2 }} onPointerDown={(e) => e.stopPropagation()}>
       {shown.slice(0, MAX).map((c) => (
         <button key={c} type="button" title={`${c} (Option-click to forget it)`} aria-label={c} className={cur && c.toLowerCase() === cur.toLowerCase() ? "on" : ""} style={btn}
           onClick={(e) => (e.altKey ? forget(c) : pick(c))}><span style={dot(c, square)} /></button>

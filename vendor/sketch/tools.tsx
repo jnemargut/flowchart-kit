@@ -20,9 +20,15 @@ const LABEL: Record<DrawTool, string> = { select: "Select (V)", pen: "Pen (D)", 
 /** The single-key shortcuts that go with the toolbar. */
 export const TOOL_KEYS: Record<string, DrawTool> = { v: "select", d: "pen", r: "rect", o: "ellipse", l: "line", a: "arrow", t: "text" };
 
-/** Draw anything the kit's own vocabulary doesn't have, in marker colors. */
-export function Tools({ tool, setTool, color, setColor }: { tool: DrawTool; setTool: (t: DrawTool) => void; color: string; setColor: (c: string) => void }) {
+/** Line thickness for new drawings (pen, boxes, ovals, lines, arrows). */
+export const WEIGHTS = ["thin", "normal", "thick"] as const;
+const WEIGHT_PX: Record<string, number> = { thin: 1.3, normal: 2.6, thick: 5 };
+const WeightIcon = ({ w }: { w: string }) => <svg viewBox="0 0 24 24" width={20} height={20}><path d="M4 12 L20 12" stroke="currentColor" strokeWidth={WEIGHT_PX[w] ?? 2.6} strokeLinecap="round" /></svg>;
+
+/** Draw anything the kit's own vocabulary doesn't have, in marker colors and three line weights. */
+export function Tools({ tool, setTool, color, setColor, weight, setWeight }: { tool: DrawTool; setTool: (t: DrawTool) => void; color: string; setColor: (c: string) => void; weight?: string; setWeight?: (w: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [wOpen, setWOpen] = useState(false);
   return (
     <div className="tools" onPointerDown={(e) => e.stopPropagation()}>
       {(Object.keys(ICON) as DrawTool[]).map((t) => (
@@ -39,6 +45,16 @@ export function Tools({ tool, setTool, color, setColor }: { tool: DrawTool; setT
           </div>
         ) : null}
       </div>
+      {setWeight ? (
+        <div className="tool-color">
+          <button title={`Line thickness: ${weight ?? "normal"}`} aria-label="Line thickness" onClick={() => setWOpen(!wOpen)}><WeightIcon w={weight ?? "normal"} /></button>
+          {wOpen ? (
+            <div className="color-pop">
+              {WEIGHTS.map((w) => <button key={w} title={w} aria-label={w} className={(weight ?? "normal") === w ? "on" : ""} onClick={() => { setWeight(w); setWOpen(false); }}><WeightIcon w={w} /></button>)}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

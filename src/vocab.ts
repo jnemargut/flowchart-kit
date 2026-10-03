@@ -99,6 +99,8 @@ export const NODE_PROPS: Record<string, string> = {
   ref: "cards: a path to a storyboard, panel, wireframe, screen or image",
   crop: "cards: [left, top, right, bottom] as fractions of the picture (the editor's Crop button writes it)",
   sketch: "image cards: false shows the picture as it is (default: sketchified in grays to match)",
+  mirror: "image cards: true flips the picture left to right",
+  turn: "image cards: turn the picture clockwise, 90 | 180 | 270",
   url: "a web address; link cards show it, anything else gets a clickable link badge",
   product: "true draws it teal: this is where the product shows up",
   size: "text size: s | m (default) | l | xl",
@@ -127,4 +129,5 @@ export const LINK_PROPS: Record<string, string> = {
   fromSide: `which side it leaves from: "left" | "right" | "top" | "bottom" (default: the layout picks)`,
   toSide: "which side it arrives on (same choices)",
   bend: "[dx, dy]: pulls the arrow's middle that far from where the layout puts it, to route around things. Editor-owned: the designer drags the arrow's middle handle. Leave it out.",
+  size: "the label's text size: s | m (default) | l | xl",
 };
