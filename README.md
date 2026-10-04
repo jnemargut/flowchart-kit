@@ -120,12 +120,13 @@ It picks a recipe by the question you're asking, not by what's newest:
 | How do I explain this decision? | Before, after, what we're not doing, what we need: a deck |
 | Where do we even start? | A one-frame brief: problem, who, decided, unknowns, how we'd know |
 | What did the research say? | Findings in people's own words, and a storyboard built from their quotes |
+| What do the numbers say? | Two or three rough charts, each with its takeaway and its caveat beside it |
 | How do others do it? | Their screens in a row per product, with what to steal and avoid |
 | What has to happen behind the scenes? | A service blueprint: the person, the product, staff and systems in lanes |
 | What screens are there? | A site map, top down, with orphans and dead ends flagged |
 | What's the smallest version? | Now, next and later, with the small and full versions wireframed side by side |
 | What could make this fail? | Assumptions ranked by risk, with a cheap test for the top three |
-| Will people get it? | A clickable flow, tasks in the person's words, and what to watch for |
+| Will people get it? | A clickable prototype you can send, tasks in the person's words, and what to watch for |
 | Why change anything? | Today's storyboard beside the proposed one, panel for panel |
 | What should it look like? | A moodboard: your references in full color, mood words, palettes and type, two or three directions |
 
@@ -153,6 +154,10 @@ what's installed.
   empty one to fill in. It's sketchified in grays to match (switch that off if you want the real thing), and
   **Crop…** shows just the part you want, **Mirror** flips it and **Turn** gives it a quarter turn. Cards from
   the other kits crop too.
+- **Rough charts.** Bars, sideways bars, a line, a funnel, a pie or a donut from a few numbers, drawn in marker
+  with every number written on it. Call out the one that matters and the rest stay gray. Type the numbers in the
+  side panel, or copy cells from a spreadsheet and paste them on the board: they land as a chart. Made for "most
+  people drop off at the cart", not for dashboards.
 - **Text** wherever you want it, with **bold**, *italic*, underline and ~~strikethrough~~ (Cmd+B, Cmd+I, Cmd+U).
 - **Drawing.** A pen, boxes, ovals, lines, arrows and free text in six marker colors (or any color you pick), thin,
   normal or thick, and text in four sizes. Draw swimlanes inside a

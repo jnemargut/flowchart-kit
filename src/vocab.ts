@@ -2,7 +2,13 @@
  * The closed vocabulary: node types, sticky colors, frame relations. The schema, the checker, the docs and the
  * editor's palette all read from here.
  */
+import { CHART_KINDS } from "../vendor/sketch/chart";
+import { MARKER_COLORS } from "../vendor/sketch/shapes";
 import type { NodeType, Side, StickyColor } from "./types";
+
+export { CHART_KINDS };
+/** A chart's accent color (or any hex). */
+export const CHART_COLORS = [...MARKER_COLORS] as string[];
 
 export interface NodeDef {
   type: NodeType;
@@ -21,6 +27,7 @@ export const NODE_TYPES: Record<NodeType, NodeDef> = {
   text: { type: "text", label: "Text", doc: "Loose hand-written words: a heading, a lane name, a comment. `near` puts it beside a node.", example: { type: "text", text: "Nobody tells them it's late", near: "wait" } },
   stamp: { type: "stamp", label: "Stamp", doc: "A little marker icon: a click cursor on a screen, a star on what matters, a smiley or a frown on a feeling. `near` puts it on top of a node, `at` says where on it.", example: { type: "stamp", icon: "cursor", near: "status-screen", at: [0.5, 0.82] } },
   link: { type: "link", label: "Link", doc: "A web page as a card: a site, a ticket, a doc, a prototype. `text` is its title, `url` where it goes. (Any other node can carry a `url` too.)", example: { type: "link", text: "ORDER-412: late order alerts", url: "https://example.atlassian.net/browse/ORDER-412", near: "late-alert" } },
+  chart: { type: "chart", label: "Chart", doc: "A rough chart from a few numbers: bars, rows (sideways bars, for long labels), a line, a funnel, a pie or a donut. `text` is its title, `data` the numbers, `highlight` what to call out. Directional, not precise: every number is written on it.", example: { type: "chart", kind: "funnel", text: "Where people drop off", data: [["Browse", 1200], ["Cart", 640], ["Checkout", 410], ["Paid", 210]], highlight: "Cart", unit: "people", frame: "data" } },
   card: { type: "card", label: "Card", doc: "A storyboard, a storyboard panel, a wireframe flow or screen, or an image, pointed at by `ref` and drawn by its own kit. Link to and from it like any step.", example: { type: "card", ref: "./late-latte.storyboard.json#in-line", frame: "late" } },
 };
 export const TYPES = Object.keys(NODE_TYPES) as NodeType[];
@@ -92,7 +99,12 @@ export const NODE_PROPS: Record<string, string> = {
   type: `${TYPES.join(" | ")} (default box)`,
   text: "the words on it",
   frame: "the frame it lives in (leave out for the loose area)",
-  color: `stickies: ${STICKY_COLORS.join(" | ")} (default yellow), or any hex like "#e8b04b"`,
+  color: `stickies: ${STICKY_COLORS.join(" | ")} (default yellow); charts: the accent, ${CHART_COLORS.join(" | ")}; or any hex like "#e8b04b"`,
+  kind: `charts: ${CHART_KINDS.join(" | ")} (default bar). hbar is sideways bars, for long labels`,
+  data: 'charts: the numbers, [["Browse", 1200], ["Cart", 640]] or { "Browse": 1200, "Cart": 640 }',
+  highlight: "charts: a label (or a list of them) to call out in the accent color; the rest stay gray",
+  unit: 'charts: goes on every number: "%", "$", "people", "min"',
+  values: "charts: false hides the numbers",
   near: "stickies and text: the id of the node to sit beside; stamps: the node to sit on top of",
   icon: `stamps: ${STAMP_NAMES.join(" | ")}`,
   at: "stamps on a node: [x, y] as fractions of it (default [1, 0], its top-right corner)",

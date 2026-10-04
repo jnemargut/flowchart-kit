@@ -5,7 +5,7 @@ export const CLI = "fc";
 
 export const SKILL_MD = `---
 name: flowchart
-description: Build low-fi, marker-style flowcharts, sticky-note boards and an infinite canvas (frames, steps, decisions, stickies, stamps, links, and cards showing storyboards or wireframes) as a flowchart.json file, validate it, and open the canvas editor. Use when the user asks for a flowchart, a user flow, a journey or process map, a sticky-note board, a brainstorm, branching paths of storyboards or wireframes, or one board to think through or present a product idea.
+description: Build low-fi, marker-style flowcharts, sticky-note boards and an infinite canvas (frames, steps, decisions, stickies, stamps, links, rough charts, and cards showing storyboards or wireframes) as a flowchart.json file, validate it, and open the canvas editor. Use when the user asks for a flowchart, a user flow, a journey or process map, a sticky-note board, a brainstorm, branching paths of storyboards or wireframes, or one board to think through or present a product idea.
 ---
 
 # Flowcharts and a canvas, built by your agent
@@ -66,6 +66,12 @@ path. **Below, \`${CLI}\` is short for that whole command.**
   for parked, yellow for everything else.
 - **Stamps point at things.** A \`cursor\` on a wireframe card shows the tap, a \`star\` marks the best idea, a
   \`frown\` marks where it hurts: \`{ "type": "stamp", "icon": "cursor", "near": "status", "at": [0.5, 0.8] }\`.
+- **Numbers, roughly.** When a number makes the point ("most people drop off at the cart", "8 of 12 asked
+  about the ETA"), put a \`chart\` beside it: \`{ "type": "chart", "kind": "funnel", "text": "Where people drop off",
+  "data": [["Browse", 1200], ["Cart", 640], ["Paid", 210]], "highlight": "Cart" }\`. Kinds: bar, hbar (long
+  labels), line (over time), funnel, pie, donut (parts of a whole, a few slices). Do the math yourself first
+  (with code if there's a file); the chart shows the two or three numbers that matter, not the whole sheet.
+  \`highlight\` the one thing to look at and put the takeaway on a sticky next to it.
 - **Link out.** A ticket, a doc or a prototype is a \`link\` card (\`"url"\`), or a \`url\` on any step or frame.
 - **Show, don't describe.** If a storyboard panel or a wireframe screen exists for a moment, put it on the board
   as a \`card\` and link to it from the step (\`"style": "dashed"\` reads as "see this").

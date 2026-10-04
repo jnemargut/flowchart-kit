@@ -285,3 +285,9 @@ a.btn { text-decoration: none; color: inherit; display: inline-block; }
 .sel-box.locked { border-style: dashed !important; }
 .seg.icons button { padding: 3px 6px; display: inline-grid; place-items: center; }
 .actions.arrange { margin-top: 6px; }
+
+/* chart cards: the numbers box and the call-out chips */
+.chart-data { width: 100%; min-height: 84px; resize: vertical; font-size: var(--text-xs); line-height: 1.5; border: 1.5px solid var(--color-400); background: #fff; padding: 4px 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chips button { border: 1.5px solid var(--color-400); background: #fff; border-radius: 12px; padding: 1px 9px; font-size: var(--text-xs); cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chips button.on { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-paper); }

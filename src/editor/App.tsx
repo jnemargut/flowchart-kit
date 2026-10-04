@@ -9,6 +9,7 @@ import { center, frameAt, homeFrame, layoutBoard, slides, type BoardLayout, type
 import { textWidth } from "../text";
 import { isNote, typeOf, type Cards, type FlowchartFile, type FNode, type Side4 } from "../types";
 import { validate } from "../validate";
+import { parseChartText } from "../../vendor/sketch/chart";
 import { api, cardUrl } from "./api";
 import { boxOf, Canvas, type EditEnd, type InlineEdit } from "./Canvas";
 import { Inspector, type InspectorActions } from "./Inspector";
@@ -193,6 +194,8 @@ export function App() {
       const t = typeOf(n);
       if (t === "card") { if (n.ref) a.openCard(n.ref); else chooseImage(id); return; }
       if (t === "stamp") { setFocusText((x) => x + 1); return; }
+      // a chart's words are its title, along the top
+      if (t === "chart") { setEditing({ key, value: n.text ?? "", box: { x: b.x + 8, y: b.y + 6, w: b.w - 16, h: Math.max(34, b.size * 1.22 + 14) }, size: b.size, face: "hand", multiline: false, align: "left" }); return; }
       setEditing({ key, value: n.text ?? "", box: b, size: t === "text" ? 20 : 18, face: "hand", multiline: t !== "link", align: t === "link" || t === "text" ? "left" : "center" });
     } else if (kind === "frame") {
       const f = Lx.frames[id];
@@ -271,6 +274,7 @@ export function App() {
     chooseImage: (id) => chooseImage(id),
     crop: (id) => setCropping(id),
     set: (path, value, co) => doc && edit(M.setAt(doc, path, value), co),
+    setMany: (changes, co) => doc && edit(changes.reduce((d, [path, value]) => M.setAt(d, path, value), doc), co),
     select: setSel,
     align: (how) => {
       if (!doc || !base) return;
@@ -847,6 +851,16 @@ export function App() {
         if (pack?.nodes) { pastePack(pack, at); return; }
       } catch { /* plain text */ }
       const t = text.trim();
+      // cells copied from a spreadsheet (or "label, number" lines) become a chart
+      const table = parseChartText(t);
+      const lines = t.split(/\r?\n/).filter((l) => l.trim());
+      if (table.rows.length >= 2 && table.rows.length >= lines.length - 1 && lines.filter((l) => /\t|[,:;]\s*[-+]?[$€£¥]?\d/.test(l)).length >= table.rows.length) {
+        const r = addAt(doc, { type: "chart", text: table.title ?? "", data: table.rows, ...(table.unit ? { unit: table.unit } : {}) }, at.x, at.y, base);
+        edit(r.doc);
+        setSel([`node:${r.id}`]);
+        flash(`Made a chart from ${table.rows.length} rows. Pick its kind in the panel.`);
+        return;
+      }
       const url = isUrl(t) ? (t.startsWith("www.") ? `https://${t}` : t) : undefined;
       const r = addAt(doc, url ? { type: "link", url, text: url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "") } : { type: "sticky", text: t.slice(0, 400) }, at.x, at.y, base);
       edit(r.doc);

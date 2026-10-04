@@ -183,9 +183,10 @@
               "text",
               "stamp",
               "link",
+              "chart",
               "card"
             ],
-            "description": "box | pill | diamond | sticky | text | stamp | link | card (default box)"
+            "description": "box | pill | diamond | sticky | text | stamp | link | chart | card (default box)"
           },
           "text": {
             "type": "string",
@@ -195,6 +196,66 @@
             "type": "string",
             "description": "the frame it lives in (leave out for the loose area)"
           },
+          "kind": {
+            "enum": [
+              "bar",
+              "hbar",
+              "line",
+              "funnel",
+              "pie",
+              "donut"
+            ],
+            "description": "charts: bar | hbar | line | funnel | pie | donut (default bar). hbar is sideways bars, for long labels"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ],
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              }
+            ],
+            "description": "charts: the numbers, [[\"Browse\", 1200], [\"Cart\", 640]] or { \"Browse\": 1200, \"Cart\": 640 }"
+          },
+          "highlight": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "description": "charts: a label (or a list of them) to call out in the accent color; the rest stay gray"
+          },
+          "unit": {
+            "type": "string",
+            "description": "charts: goes on every number: \"%\", \"$\", \"people\", \"min\""
+          },
+          "values": {
+            "type": "boolean",
+            "description": "charts: false hides the numbers"
+          },
           "color": {
             "anyOf": [
               {
@@ -203,7 +264,13 @@
                   "pink",
                   "blue",
                   "green",
-                  "gray"
+                  "gray",
+                  "ink",
+                  "grey",
+                  "red",
+                  "blue",
+                  "green",
+                  "yellow"
                 ]
               },
               {
@@ -212,7 +279,7 @@
                 "description": "Any color as a hex, e.g. \"#e8b04b\"."
               }
             ],
-            "description": "stickies: yellow | pink | blue | green | gray (default yellow), or any hex like \"#e8b04b\""
+            "description": "stickies: yellow | pink | blue | green | gray (default yellow); charts: the accent, ink | grey | red | blue | green | yellow; or any hex like \"#e8b04b\""
           },
           "near": {
             "type": "string",

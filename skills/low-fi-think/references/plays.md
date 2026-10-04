@@ -10,7 +10,9 @@ The designer suspects the ask treats a symptom.
 2. **Storyboard** that moment as it happens today (the trigger before the product, the workaround people use, how
    it feels). The insight usually lives in the workaround panel.
 3. **Board**: The ask (link cards) → What actually happens (storyboard cards) → The ask, as a flow (with where it
-   breaks marked) → One or two alternatives → Questions for the PM.
+   breaks marked) → One or two alternatives → Questions for the PM. If there's data that points at the real
+   problem (most people drop off before the step the ask is about), a chart of it in "What actually happens" is
+   the strongest argument you have. If there isn't, a pink sticky: "What would tell us which problem this is?"
 4. Wireframe only the screens that make the difference between the ask and the alternative visible.
 
 What you say: "The ticket fixes the timer. Panel 5 is the real problem: nobody tells Marcus it's late, so he asks a
@@ -42,8 +44,8 @@ human. Option B texts him instead. Three questions before we pick."
 ## Explain a decision to someone else
 
 1. Storyboard the before and the after (two short boards, or one with a turn in the middle).
-2. **Board** as a deck: Why (storyboard cards) → What changes (wireframe cards) → What we're not doing (gray
-   stickies) → What we need from you (pink stickies). Frame `notes` become speaker notes.
+2. **Board** as a deck: Why (storyboard cards, and a chart if a number makes the case) → What changes (wireframe
+   cards) → What we're not doing (gray stickies) → What we need from you (pink stickies). Frame `notes` become speaker notes.
 3. Offer `fc export <board> --pptx`.
 
 ## Kick off a project
@@ -52,7 +54,8 @@ For the first hour of something new, or a brief that's mostly vibes.
 
 1. **Board**, one frame **The brief** with five text headings and stickies under each: *The problem* (one
    sentence, the person's words if you have them), *Who it's for*, *Already decided* (gray), *Unknowns* (pink),
-   *How we'd know it worked* (green: a behavior, not a feature, e.g. "people stop asking the barista").
+   *How we'd know it worked* (green: a behavior, not a feature, e.g. "people stop asking the barista"). If today's
+   number for that is known, a small chart of it under the heading: the baseline everyone will measure against.
 2. A link card for every source (ticket, doc, thread).
 3. If the problem is a moment in someone's day, a 3 to 5 panel **storyboard** of it today, as cards beside the brief.
 
@@ -64,9 +67,23 @@ What you say: "Here's the brief as I understand it. The pink stickies are what I
    Don't paraphrase the interesting part away.
 2. **Board**: cluster into frames named for the finding ("The ETA is a promise people plan around"), not the topic.
    Count how many people back each one in the frame's notes. Weak findings (one person) get a gray sticky saying so.
+   When the counts are the point (8 of 12 asked about the ETA), one `hbar` chart across the findings, the
+   strongest highlighted; small samples stay counts ("8 of 12"), never percentages.
 3. **Storyboard** the strongest finding as one real person's day, with their actual quotes in the bubbles and
    thoughts. Credit composites honestly ("based on P3 and P7") in the board's notes.
 4. A frame **So what** with 2 or 3 text notes, and **Still don't know** with pink stickies.
+
+## What the data says (a CSV, analytics, survey counts)
+
+1. Do the math first, honestly: read the file with code, count and compare, and note what's missing or odd (a
+   small sample, a weird week). Never make numbers up; if there's no data, say so and make it a pink sticky.
+2. **Board**: a frame per finding, named for it ("Half the drop-off is at the cart"), each with **one chart** that
+   shows it (`"type": "chart"`; funnel for steps, line for over time, bar or hbar to compare, pie or donut only for
+   a few parts of a whole) and `highlight` on the part to look at. Two or three charts, not a dashboard.
+3. Beside each chart a sticky with the takeaway in plain words, and a gray one with the caveat (sample size,
+   where the numbers came from). Link to the source with a `link` card if there is one.
+4. If a number points at a moment in someone's day (people giving up at the cart), a storyboard card of that
+   moment next to it: the number says how many, the panel says why.
 
 ## Teardown: how others do it
 
@@ -113,15 +130,19 @@ What you say: "Now gets Marcus a text when it's late. Everything else waits unti
 2. **Board**: a frame per level, **Risky and unknown** (pink), **Risky but known**, **Safe** (gray). Within the
    risky frame, order by how much breaks if it's wrong.
 3. For the top three, a green sticky with the cheapest test: five interviews, a fake door, a day of logs, a
-   barista shadowing shift. Name what result would change the plan.
+   barista shadowing shift. Name what result would change the plan. If data already answers one, chart it next to
+   the assumption and move the sticky to the frame it belongs in.
 
 ## Plan a usability test
 
-1. **Wireframes** of the flow, linked so Play mode clicks through. That's the prototype.
+1. **Wireframes** of the flow, linked with `goes` so it clicks through. That's the prototype: Play mode in the
+   editor, or `wf export <file> --html` for one file a participant can open on their own machine.
 2. **Board**: a frame **Tasks** (3 to 5, written as the person's goal, never the button: "Order your usual for
    pickup", not "Tap Reorder"), a frame **What we're watching** (where they hesitate, what they say out loud, if
    they find X), and a frame **Who** (who to recruit, how many).
 3. Wireframe cards beside each task for where it should end. Pink stickies for what would count as a fail.
+4. After the sessions, a frame **What happened**: per task, an `hbar` of how many got through (counts, not
+   percentages, with five people), the worst one highlighted, and the quote that explains it beside it.
 
 ## Before and after
 
@@ -132,6 +153,8 @@ The most persuasive thing to bring to a stakeholder.
 2. **Board**: two frames side by side (`"near": ["right of", "before"]`), storyboard cards in the same order,
    and a text note under the panels that changed: what's different and why it matters.
 3. Wireframe cards only for the screens that make the "after" possible.
+4. If there's a number that should move (wait time, drop-off, how many ask a human), a small chart under each
+   frame: today's real number, and the "after" as a goal on a gray sticky. Never draw a made-up "after" as data.
 
 ## Visual direction (a moodboard)
 
@@ -154,6 +177,8 @@ Only when the question is about look, feel or visual style. It's the one recipe 
 - Storyboard phone showing a wireframe screen: `"device": { "type": "phone", "screen": "./x.wireframe.json#screen-id" }`.
 - A tap on a screen card: `{ "type": "stamp", "icon": "cursor", "near": "<card id>", "at": [0.5, 0.8] }`.
 - A ticket: `{ "type": "link", "text": "ORDER-412: late alerts", "url": "https://…" }`.
+- A rough chart: `{ "type": "chart", "kind": "bar", "text": "Orders by day", "data": [["Mon", 42], ["Tue", 38]], "highlight": "Tue", "unit": "orders" }`.
+  A wireframe screen can show the same numbers: `{ "type": "chart", "kind": "line", "data": [...] }`.
 - Slides: `"present": ["ask", "today", "flow", "options", "questions"]`, and `notes` on each frame.
 - Pictures for cards are made by each kit next to its file; if a kit isn't installed, the last picture still shows.
 - Any color: fills, borders, arrows, sticky paper and drawings take a hex (`"fill": "#e8b04b"`) as well as the named colors.

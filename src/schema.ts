@@ -1,6 +1,6 @@
 /** JSON Schema for *.flowchart.json, generated from the vocabulary (editors get autocomplete; the validator is stricter). */
 import { MARKER_COLORS, SHAPE_COLORS, SHAPE_FILLS, SHAPE_TYPES, SHAPE_WEIGHTS, TEXT_SIZES as SHAPE_TEXT_SIZES } from "../vendor/sketch/shapes";
-import { CONNECTORS, FILL_NAMES, FRAME_PROPS, HEADS, LINE_COLOR_NAMES, LINK_PROPS, LINK_STYLES, NODE_PROPS, SIDES, SIDES4, STAMP_NAMES, STICKY_COLORS, TEXT_SIZES, TYPES, WEIGHTS } from "./vocab";
+import { CHART_COLORS, CHART_KINDS, CONNECTORS, FILL_NAMES, FRAME_PROPS, HEADS, LINE_COLOR_NAMES, LINK_PROPS, LINK_STYLES, NODE_PROPS, SIDES, SIDES4, STAMP_NAMES, STICKY_COLORS, TEXT_SIZES, TYPES, WEIGHTS } from "./vocab";
 
 const point = { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 };
 const shape = {
@@ -42,7 +42,12 @@ export function buildSchema() {
             type: { enum: TYPES, description: NODE_PROPS.type },
             text: { type: "string", description: NODE_PROPS.text },
             frame: { type: "string", description: NODE_PROPS.frame },
-            color: { anyOf: [{ enum: STICKY_COLORS }, { type: "string", pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", description: "Any color as a hex, e.g. \"#e8b04b\"." }], description: NODE_PROPS.color },
+            kind: { enum: [...CHART_KINDS], description: NODE_PROPS.kind },
+            data: { anyOf: [{ type: "array", items: { type: "array", items: [{ type: "string" }, { type: "number" }], minItems: 2, maxItems: 2 } }, { type: "object", additionalProperties: { type: "number" } }], description: NODE_PROPS.data },
+            highlight: { anyOf: [{ type: "string" }, { type: "array", items: { type: "string" } }], description: NODE_PROPS.highlight },
+            unit: { type: "string", description: NODE_PROPS.unit },
+            values: { type: "boolean", description: NODE_PROPS.values },
+            color: { anyOf: [{ enum: [...STICKY_COLORS, ...CHART_COLORS] }, { type: "string", pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", description: "Any color as a hex, e.g. \"#e8b04b\"." }], description: NODE_PROPS.color },
             near: { type: "string", description: NODE_PROPS.near },
             icon: { enum: STAMP_NAMES, description: NODE_PROPS.icon },
             at: { ...point, description: NODE_PROPS.at },

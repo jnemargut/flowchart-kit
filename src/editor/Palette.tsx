@@ -18,6 +18,9 @@ const FLOW: { label: string; node: FNode }[] = [
   { label: "Text", node: { type: "text", text: "Words" } },
 ];
 
+/** A new chart: a few numbers to type over (or paste a spreadsheet's cells into). */
+const CHART_STARTER: FNode = { type: "chart", text: "A chart", data: [["One", 3], ["Two", 5], ["Three", 2], ["Four", 4]] };
+
 /** A real, tiny drawing of a node, filling its tile. */
 function Preview({ node, w = 92, h = 50 }: { node: FNode; w?: number; h?: number }) {
   const { L, doc } = useMemo(() => {
@@ -57,6 +60,7 @@ export function Palette({ onAdd, bust, onUpload }: { onAdd: (p: Payload) => void
         <Tile payload={{ frame: true }} label="Frame" onAdd={onAdd}>
           <svg className="preview" viewBox="0 0 92 50" width={92} height={50}><rect x={6} y={6} width={80} height={38} rx={6} fill="#fbfaf7" stroke="#959ba2" strokeWidth={2} strokeDasharray="6 4" /><text x={13} y={21} fontFamily="Permanent Marker" fontSize={10} fill="#4d535a">Frame</text></svg>
         </Tile>
+        <Tile payload={{ node: CHART_STARTER }} label="Chart" onAdd={onAdd}><Preview node={CHART_STARTER} /></Tile>
         <Tile payload={{ node: { type: "link", text: "A web page", url: "https://" } }} label="Link" onAdd={onAdd}><Preview node={{ type: "link", text: "A web page", url: "https://example.com" }} /></Tile>
         <label className="tile upload" draggable title="Click to pick a photo, a screenshot or a sketch, or drag this onto the canvas for an empty image to fill in. Pictures are sketchified in grays to match (switch that off in the inspector). You can also drop or paste images straight onto the canvas."
           onDragStart={(e) => { e.dataTransfer.setData(DRAG_TYPE, JSON.stringify({ node: { type: "card" } })); e.dataTransfer.effectAllowed = "copy"; }}>

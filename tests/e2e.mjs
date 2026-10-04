@@ -369,6 +369,64 @@ ok("Properties hides the panel", (await page.locator(".inspector").count()) === 
 await page.keyboard.press("Meta+Backslash");
 ok("Cmd+\\ brings it back", (await page.locator(".inspector").count()) === 1);
 
+// charts: add one from the palette, type numbers, pick a kind, call one out, edit the title in place, paste a sheet
+{
+  const charts = () => Object.entries(read().nodes).filter(([, n]) => n.type === "chart");
+  const validateNow = () => { try { return { ok: true, text: cli("validate", file) }; } catch (e) { return { ok: false, text: String(e.stdout) }; } };
+  await page.keyboard.press("Escape"); await page.keyboard.press("Escape");
+  const before = charts().length;
+  await page.locator(".palette .tile", { has: page.locator(".name", { hasText: /^Chart$/ }) }).click();
+  ok("the Chart tile adds a chart", await until(() => charts().length === before + 1));
+  const id = charts().map(([k]) => k).find((k) => !Object.keys(Object.fromEntries(charts().slice(0, before))).includes(k)) ?? charts().at(-1)[0];
+  const node = () => read().nodes[id];
+  await page.locator(".inspector h3", { hasText: /^Chart/ }).waitFor();
+  const box = page.getByLabel("Chart data");
+  await box.fill("Browse, 1,200\nCart, 640\nCheckout: 410\nPaid\t210\nnot a number");
+  ok("typed numbers become the chart's data (commas, colons, tabs, thousands)", await until(() => JSON.stringify(node().data) === JSON.stringify([["Browse", 1200], ["Cart", 640], ["Checkout", 410], ["Paid", 210]])), JSON.stringify(node()));
+  ok("a line without a number is pointed out", (await page.locator(".inspector .hint", { hasText: "no number" }).count()) === 1);
+  await page.getByRole("group", { name: "Chart kind" }).getByRole("button", { name: "Funnel" }).click();
+  ok("Kind switches it to a funnel", await until(() => node().kind === "funnel"));
+  await page.locator(".inspector .chips button", { hasText: /^Cart$/ }).click();
+  ok("clicking a label calls it out", await until(() => node().highlight === "Cart"));
+  await page.locator(".inspector .chips button", { hasText: /^Paid$/ }).click();
+  ok("two call-outs make a list", await until(() => JSON.stringify(node().highlight) === JSON.stringify(["Cart", "Paid"])));
+  await page.locator(".inspector .chips button", { hasText: /^Paid$/ }).click();
+  await page.getByPlaceholder("%, $, people…").fill("people");
+  ok("the unit goes on", await until(() => node().unit === "people" && node().highlight === "Cart"));
+  await page.locator(".inspector").getByRole("button", { name: "red", exact: true }).click();
+  ok("the accent color goes on", await until(() => node().color === "red"));
+  await page.getByLabel("Show the numbers").uncheck();
+  ok("the numbers can be hidden", await until(() => node().values === false));
+  await page.getByLabel("Show the numbers").check();
+  ok("and shown again", await until(() => node().values === undefined));
+  await box.fill("Browse, 1200\nBasket, 640\nCheckout, 410\nPaid, 210");
+  ok("renaming a called-out row drops the call-out instead of leaving it dangling", await until(() => node().highlight === undefined && node().data[1][0] === "Basket"));
+  await page.keyboard.press("Meta+z");
+  ok("undo brings the old numbers (and the call-out) back", await until(() => node().data?.[1]?.[0] === "Cart" && node().highlight === "Cart"), JSON.stringify(node()));
+  ok("the chart draws on the canvas with its numbers", await until(async () => (await page.locator(`svg.board [data-node="${id}"]`).textContent())?.includes("640 people · 53%")));
+  // double-click edits the title in place
+  const cb = await page.evaluate((i) => { const { L, view } = window.__fc; const b = L.nodes[i]; const c = document.querySelector(".canvas").getBoundingClientRect(); return { x: c.left + view.x + (b.x + b.w / 2) * view.k, y: c.top + view.y + (b.y + b.h / 2) * view.k }; }, id);
+  await page.mouse.dblclick(cb.x, cb.y);
+  await page.locator(".inline-edit").waitFor();
+  await page.keyboard.press("Meta+a"); await page.keyboard.type("Where people drop off"); await page.keyboard.press("Enter");
+  ok("double-click edits the chart's title", await until(() => node().text === "Where people drop off"));
+  ok("the chart is still valid", validateNow().ok, validateNow().text);
+  // cells copied from a spreadsheet, pasted on the board, become a chart
+  await page.keyboard.press("Escape"); await page.keyboard.press("Escape");
+  const n0 = charts().length;
+  await page.mouse.move(700, 500);
+  await page.evaluate(() => { const dt = new DataTransfer(); dt.setData("text/plain", "Answer\tShare\nYes\t60%\nMaybe\t15%\nNo\t25%"); window.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt })); });
+  ok("pasting spreadsheet cells makes a chart", await until(() => charts().length === n0 + 1));
+  const pasted = charts().find(([, n]) => n.text === "Answer")?.[1];
+  ok("with its rows, its title from the header, and the % spotted", JSON.stringify(pasted?.data) === JSON.stringify([["Yes", 60], ["Maybe", 15], ["No", 25]]) && pasted?.unit === "%", JSON.stringify(pasted));
+  await page.evaluate(() => { const dt = new DataTransfer(); dt.setData("text/plain", "Step 1\nStep 2"); window.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt })); });
+  ok("ordinary lines with numbers in them still paste as a sticky", await until(() => Object.values(read().nodes).some((n) => n.type === "sticky" && n.text === "Step 1\nStep 2")) && charts().length === n0 + 1);
+  // tidy up: undo both pastes so the tests after this find the board as it was
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Meta+z"); await page.keyboard.press("Meta+z");
+  ok("undo takes both pastes back", await until(() => charts().length === n0 && !Object.values(read().nodes).some((n) => n.text === "Step 1\nStep 2")));
+}
+
 // arranging: Shift-click two stickies, line them up, group them, lock them, then copy one sticky's style onto another
 {
   const L = (id) => page.evaluate((i) => window.__fc.L.nodes[i], id);

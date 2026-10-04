@@ -60,6 +60,14 @@ A web page as a card: a site, a ticket, a doc, a prototype. `text` is its title,
 {"type":"link","text":"ORDER-412: late order alerts","url":"https://example.atlassian.net/browse/ORDER-412","near":"late-alert"}
 ```
 
+### `chart`: Chart
+
+A rough chart from a few numbers: bars, rows (sideways bars, for long labels), a line, a funnel, a pie or a donut. `text` is its title, `data` the numbers, `highlight` what to call out. Directional, not precise: every number is written on it.
+
+```json
+{"type":"chart","kind":"funnel","text":"Where people drop off","data":[["Browse",1200],["Cart",640],["Checkout",410],["Paid",210]],"highlight":"Cart","unit":"people","frame":"data"}
+```
+
 ### `card`: Card
 
 A storyboard, a storyboard panel, a wireframe flow or screen, or an image, pointed at by `ref` and drawn by its own kit. Link to and from it like any step.
@@ -70,10 +78,15 @@ A storyboard, a storyboard panel, a wireframe flow or screen, or an image, point
 
 ## Node properties
 
-- `type`: box | pill | diamond | sticky | text | stamp | link | card (default box)
+- `type`: box | pill | diamond | sticky | text | stamp | link | chart | card (default box)
 - `text`: the words on it
 - `frame`: the frame it lives in (leave out for the loose area)
-- `color`: stickies: yellow | pink | blue | green | gray (default yellow), or any hex like "#e8b04b"
+- `color`: stickies: yellow | pink | blue | green | gray (default yellow); charts: the accent, ink | grey | red | blue | green | yellow; or any hex like "#e8b04b"
+- `kind`: charts: bar | hbar | line | funnel | pie | donut (default bar). hbar is sideways bars, for long labels
+- `data`: charts: the numbers, [["Browse", 1200], ["Cart", 640]] or { "Browse": 1200, "Cart": 640 }
+- `highlight`: charts: a label (or a list of them) to call out in the accent color; the rest stay gray
+- `unit`: charts: goes on every number: "%", "$", "people", "min"
+- `values`: charts: false hides the numbers
 - `near`: stickies and text: the id of the node to sit beside; stamps: the node to sit on top of
 - `icon`: stamps: cursor | star | smiley | meh | frown | heart | thumbs-up | thumbs-down | question | alert | check | cross | idea | flag | clock | eye | fire | dollar
 - `at`: stamps on a node: [x, y] as fractions of it (default [1, 0], its top-right corner)

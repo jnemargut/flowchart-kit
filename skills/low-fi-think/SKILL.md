@@ -38,7 +38,8 @@ the designer which one would help.
 
 Read everything the designer pointed at, with whatever tools you have: a Jira or Linear MCP or CLI for tickets
 (and their linked tickets, comments and acceptance criteria), docs and wikis, Slack threads, Figma links, web
-pages. Also look in the working folder for existing storyboards, wireframes and boards (`fc cards` lists them).
+pages, and data (a CSV, an analytics export, survey results, a number someone quoted in the thread). Also look in
+the working folder for existing storyboards, wireframes and boards (`fc cards` lists them).
 
 If you can't open something, say which link and ask them to paste it. Don't guess what a ticket says. Keep each
 source's real address (the Jira URL, the doc link) for its link card on the board; if a ticket only exists as a
@@ -49,6 +50,8 @@ Pull out, privately, before drawing anything:
 - **The why**: the problem or goal behind it, stated or implied.
 - **Who it's for**, and the moment in their day it touches.
 - **Constraints**: dates, platforms, dependencies, things already decided.
+- **The numbers**, if any: what's measured, how big, how sure. Work them out with code, never by eye, and never
+  make one up. A claim with no number behind it ("people hate the timer") is a gap, not a fact.
 - **Gaps**: what's missing, vague or contradictory. These become the questions to bring back.
 - **The designer's own doubt**: "rethink" usually means they suspect the ask solves the wrong thing. Find where.
 
@@ -65,6 +68,7 @@ Pull out, privately, before drawing anything:
 | Where do we even start? (a new project, a vague brief) | **Kickoff** frame: problem, who, decided, unknowns, success |
 | What did the research actually say? | **Findings**: themed stickies, then a storyboard in people's own words |
 | How do others do this? | **Teardown**: their screens as image cards, a row per product |
+| What do the numbers say? (a CSV, analytics, survey counts, a metric someone quoted) | **Data story**: two or three rough charts, each with its takeaway |
 | What has to happen behind the scenes for this to work? | **Service blueprint**: lanes for person, product, staff, systems |
 | What screens exist and how do they connect? | **Site map**: every screen as a tree, top down |
 | What's the smallest version worth building? | **Scope cut**: now / next / later, smallest version wireframed |
@@ -107,7 +111,8 @@ with short relative paths. Storyboards and wireframes feed each other, so go in 
    - **The ask**: a `link` card per ticket or doc (`"url"`), the requirements as yellow stickies, the "why" as
      text. Faithful to the source: this frame is the requester's view, not yours.
    - **What actually happens**: the storyboard as cards (the whole board, or the 2 or 3 panels that matter), linked
-     in order, with stickies where it hurts and a `frown` stamp on the worst moment.
+     in order, with stickies where it hurts and a `frown` stamp on the worst moment. If there's data on how often
+     it happens, one rough `chart` beside the panel it's about: the panel shows why, the chart shows how many.
    - **The ask, as a flow**: steps and decisions of what's being requested, with wireframe screens as cards. Mark
      where it breaks: a red `stroke` on the step, a red sticky saying why.
    - **Options**: one frame each (2 or 3 at most). Each a short flow, its key screen as a card, and a green sticky for
@@ -118,12 +123,15 @@ with short relative paths. Storyboards and wireframes feed each other, so go in 
    frame `notes` (what to say when it's on screen). `fc validate`, then `fc render` and *look at the PNG*: fix
    anything crowded, cut off or confusing.
 
+Charts are rough on purpose: one per point, two or three numbers that matter, `highlight` on the one to look at,
+and a sticky with the takeaway beside it. A dashboard of charts is a sign you haven't found the point yet.
+
 Stamps, colors and emphasis carry meaning, not decoration: teal (`"product": true`) only where the product
 shows up, red for where it breaks, a `cursor` stamp where someone taps, **bold** for the one word that matters.
 
 Recipes for each of these (pushing back on a request, a messy brainstorm, comparing directions, mapping edge
-cases, explaining a decision, kicking off, research findings, teardowns, service blueprints, site maps, cutting
-scope, assumptions and risks, usability tests, before and after, visual direction):
+cases, explaining a decision, kicking off, research findings, what the data says, teardowns, service blueprints,
+site maps, cutting scope, assumptions and risks, usability tests, before and after, visual direction):
 [references/plays.md](references/plays.md).
 
 ## 5. Hand it over
@@ -136,7 +144,8 @@ short message, not a report:
 - What you assumed.
 
 Offer the next step in one line: "Want the options as wireframes?", "Should I make a deck of this for the PM?"
-(`fc export <file> --pptx` or `--pdf`).
+(`fc export <file> --pptx` or `--pdf`), "Want a clickable prototype of option B to send around?"
+(`wf export <file> --html`: one file, opens anywhere, no install).
 
 ## Keep going together
 

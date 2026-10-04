@@ -47,6 +47,12 @@ export function measure(n: FNode, nudge: { w?: number; h?: number } = {}, card?:
     const s = nudge.w ?? 44;
     return { w: s, h: s, lines: [], size: FONT };
   }
+  if (t === "chart") {
+    // a title on top (if it has one), the chart under it; resizable like a card
+    const w = nudge.w ?? Math.round(380 * Math.max(1, k));
+    const lines = text.trim() ? wrap(text, "hand", FONT, w - 32).slice(0, 2) : [];
+    return { w, h: nudge.h ?? Math.round(240 * Math.max(1, k)) + lines.length * LH, lines, size: FONT };
+  }
   if (t === "link") {
     const w = nudge.w ?? Math.round(250 * Math.max(1, k));
     const lines = wrap(text || hostOf(n.url ?? ""), "hand", FONT, w - 56).slice(0, 3);

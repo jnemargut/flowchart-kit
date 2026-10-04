@@ -18,6 +18,7 @@ import { isDarkColor, isHex, normHex } from "../../vendor/sketch/tokens";
 /** A named color from `table`, or any hex. */
 const anyColor = (v: string, table: Record<string, string>, fallback: string) => (isHex(v) ? normHex(v) : table[v] ?? fallback);
 import { Stamp } from "./stamps";
+import { SketchChart } from "../../vendor/sketch/chart";
 
 export interface ArtOpts {
   cards?: Cards;
@@ -93,6 +94,18 @@ function NodeArt({ b, n, o, wob }: { b: NodeBox; n: FNode; o: ArtOpts; wob?: str
         <text fontFamily={HAND} fontSize={b.size} fill={C.ink}>{richLines(n.text ?? "", b.lines, C.ink, b.size).map((l, i) => <tspan key={i} x={b.x + 16} y={b.y + 26 + i * lh}>{l}</tspan>)}</text>
         <text x={b.x + 16} y={b.y + b.h - 14} fontFamily={MONO} fontSize={12} fill={C.g7}>{hostOf(url).slice(0, Math.floor((b.w - 60) / 7.3))}</text>
         <LinkBadge url={url} x={b.x + b.w - 20} y={b.y + 20} r={12} />
+      </g>
+    );
+  }
+  if (b.type === "chart") {
+    const lh = b.size * 1.22, titleH = b.lines.length ? b.lines.length * lh + 14 : 6;
+    const card = n.fill === "none" ? "transparent" : chosen ?? "#fff";
+    return (
+      <g data-node={b.id}>
+        {shadow ? <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={8} fill={C.g2} transform={off} /> : null}
+        <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={8} fill={card} stroke={n.stroke === "none" ? "none" : ink} strokeWidth={line.strokeWidth} filter={wob} />
+        {b.lines.length ? <text fontFamily={HAND} fontSize={b.size} fill={words}>{richLines(n.text ?? "", b.lines, words, b.size).map((l, i) => <tspan key={i} x={b.x + 16} y={b.y + 12 + b.size * 0.9 + i * lh}>{l}</tspan>)}</text> : null}
+        <SketchChart spec={n} x={b.x + 14} y={b.y + titleH} w={b.w - 28} h={b.h - titleH - 12} filter={wob} scale={b.size / 18} />
       </g>
     );
   }

@@ -4,14 +4,15 @@ import { findUndrawable, undrawableHint } from "../vendor/sketch/glyphs";
 import { formatIssues, suggest, type Issue, type Result } from "../vendor/sketch/suggest";
 import { parseRef } from "./refs";
 import { isCrop } from "../vendor/sketch/crop";
+import { chartRows } from "../vendor/sketch/chart";
 import { layoutBoard } from "./layout";
 import { isNote, typeOf, type FlowchartFile } from "./types";
-import { CONNECTORS, FILL_NAMES, HEADS, LINE_COLOR_NAMES, LINK_STYLES, NODE_TYPES, SIDES, SIDES4, STAMP_NAMES, STICKY_COLORS, TEXT_SIZES, TYPES, WEIGHTS } from "./vocab";
+import { CHART_COLORS, CHART_KINDS, CONNECTORS, FILL_NAMES, HEADS, LINE_COLOR_NAMES, LINK_STYLES, NODE_TYPES, SIDES, SIDES4, STAMP_NAMES, STICKY_COLORS, TEXT_SIZES, TYPES, WEIGHTS } from "./vocab";
 import type { StickyColor } from "./types";
 
 export type { Result };
 
-const NODE_KEYS = ["type", "text", "frame", "color", "near", "icon", "at", "ref", "url", "sketch", "crop", "mirror", "turn", "locked", "group", "product", "size", "fill", "stroke", "weight"];
+const NODE_KEYS = ["type", "text", "frame", "color", "kind", "data", "highlight", "unit", "values", "near", "icon", "at", "ref", "url", "sketch", "crop", "mirror", "turn", "locked", "group", "product", "size", "fill", "stroke", "weight"];
 const FRAME_KEYS = ["title", "near", "dir", "notes", "url", "shapes", "size"];
 const okUrl = (u: unknown) => typeof u === "string" && /^(https?:\/\/|mailto:|figma:|file:|\.{0,2}\/)\S+$/i.test(u.trim());
 const LINK_KEYS = ["from", "to", "label", "style", "shape", "head", "color", "weight", "fromSide", "toSide", "bend", "size"];
@@ -65,8 +66,10 @@ export function validate(doc: FlowchartFile): Result {
     if (n.type !== undefined && !TYPES.includes(n.type)) { const s = suggest(String(n.type), TYPES); err(`${p}.type`, `"${n.type}" isn't a node type.`, s ? `Did you mean "${s}"?` : `Types: ${TYPES.join(", ")}. Anything else can be a box, a sticky or a drawing.`); continue; }
     const t = typeOf(n);
     if (n.frame !== undefined && !frames[n.frame]) { const s = suggest(n.frame, frameIds); err(`${p}.frame`, `There's no frame "${n.frame}".`, s ? `Did you mean "${s}"?` : frameIds.length ? `Frames: ${frameIds.join(", ")}` : `Add it to "frames", or leave "frame" out.`); }
-    if (n.color !== undefined) {
-      if (t !== "sticky") warn(`${p}.color`, `"color" only applies to stickies.`, "Leave it out, or make it a sticky.");
+    if (n.color !== undefined && t === "chart") {
+      if (!CHART_COLORS.includes(String(n.color)) && !isHex(n.color)) { const s = suggest(String(n.color), CHART_COLORS); err(`${p}.color`, `"${n.color}" isn't a chart color.`, s ? `Did you mean "${s}"?` : `Colors: ${CHART_COLORS.join(", ")}, or any hex like "#e8b04b".`); }
+    } else if (n.color !== undefined) {
+      if (t !== "sticky") warn(`${p}.color`, `"color" only applies to stickies and charts.`, "Leave it out, or make it a sticky.");
       else if (!STICKY_COLORS.includes(n.color as StickyColor) && !isHex(n.color)) { const s = suggest(String(n.color), STICKY_COLORS); err(`${p}.color`, `"${n.color}" isn't a sticky color.`, s ? `Did you mean "${s}"?` : `Colors: ${STICKY_COLORS.join(", ")}`); }
     }
     if (n.near !== undefined) {
@@ -83,6 +86,29 @@ export function validate(doc: FlowchartFile): Result {
       if (n.icon !== undefined) warn(`${p}.icon`, `"icon" only applies to stamps.`);
       if (n.at !== undefined) warn(`${p}.at`, `"at" only applies to stamps.`);
     }
+    if (t === "chart") {
+      if (n.kind !== undefined && !(CHART_KINDS as readonly string[]).includes(n.kind)) { const s = suggest(String(n.kind), [...CHART_KINDS]); err(`${p}.kind`, `"${n.kind}" isn't a chart kind.`, s ? `Did you mean "${s}"?` : `Kinds: ${CHART_KINDS.join(", ")}`); }
+      const okShape = n.data === undefined || Array.isArray(n.data) || (typeof n.data === "object" && n.data !== null);
+      const rows = chartRows(n.data);
+      if (!okShape) err(`${p}.data`, '"data" is a list of [label, number] pairs.', '"data": [["Browse", 1200], ["Cart", 640]]');
+      else if (!rows.length) warn(`${p}.data`, "This chart has no numbers yet.", '"data": [["Browse", 1200], ["Cart", 640]]');
+      else {
+        const raw = Array.isArray(n.data) ? n.data.length : Object.keys(n.data ?? {}).length;
+        if (rows.length < raw) warn(`${p}.data`, `${raw - rows.length} of the rows don't have a number, so they're left out.`, 'Each row is [label, number], e.g. ["Cart", 640].');
+        const labels = rows.map((r) => r[0]);
+        const hl = n.highlight === undefined ? [] : Array.isArray(n.highlight) ? n.highlight : [n.highlight];
+        if (n.highlight !== undefined && (!hl.length || hl.some((h) => typeof h !== "string"))) err(`${p}.highlight`, '"highlight" is a label or a list of labels.', `e.g. "highlight": "${labels[0]}"`);
+        else for (const h of hl) if (!labels.some((l) => l.trim().toLowerCase() === String(h).trim().toLowerCase())) { const s = suggest(String(h), labels); err(`${p}.highlight`, `There's no "${h}" in the data.`, s ? `Did you mean "${s}"?` : `Labels: ${labels.join(", ")}`); }
+        const kind = n.kind ?? "bar";
+        if ((kind === "pie" || kind === "donut") && rows.some((r) => r[1] < 0)) warn(`${p}.data`, "A pie can't show negative numbers; they're left out.", 'Try "kind": "bar".');
+        if ((kind === "pie" || kind === "donut") && rows.length > 7) warn(`${p}.kind`, `${rows.length} slices is a lot for a pie.`, 'Try "kind": "hbar", or group the small ones into "Other".');
+        if (kind === "funnel" && rows.some((r, i) => i > 0 && r[1] > rows[i - 1][1])) warn(`${p}.data`, "A funnel usually only gets narrower; one step is bigger than the one before.", 'Check the order, or try "kind": "bar".');
+        if (kind === "bar" && rows.length > 2 && rows.some((r) => r[0].length > 14)) warn(`${p}.kind`, "Long labels get cut short under bars.", 'Try "kind": "hbar": sideways bars have room for them.');
+        if (rows.length > 40) warn(`${p}.data`, `${rows.length} rows is a lot for a rough chart.`, "Keep the few that tell the story, or group them.");
+      }
+      if (n.unit !== undefined && typeof n.unit !== "string") err(`${p}.unit`, '"unit" is a few characters, like "%", "$" or "people".');
+      if (n.values !== undefined && typeof n.values !== "boolean") err(`${p}.values`, '"values" is true or false.');
+    } else for (const k of ["kind", "data", "highlight", "unit", "values"] as const) if (n[k] !== undefined) warn(`${p}.${k}`, `"${k}" only applies to charts.`, 'Add "type": "chart".');
     if (t === "card") {
       if (!n.ref) warn(`${p}.ref`, "This card is empty: it doesn't show anything yet.", 'Give it a "ref", e.g. "./late-latte.storyboard.json#in-line" or "./photo.jpg". In the editor, drop an image on it.');
       else if (!parseRef(n.ref).kind) err(`${p}.ref`, `Cards show storyboards, wireframes or images, not "${n.ref}".`, 'Point at "x.storyboard.json", "x.storyboard.json#panel", "x.wireframe.json#screen" or an image.');

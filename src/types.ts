@@ -1,19 +1,28 @@
 import type { MarkupStroke, SketchShape } from "../vendor/sketch/shapes";
 
-export type NodeType = "box" | "pill" | "diamond" | "sticky" | "text" | "card" | "stamp" | "link";
+export type NodeType = "box" | "pill" | "diamond" | "sticky" | "text" | "card" | "stamp" | "link" | "chart";
 export type StickyColor = "yellow" | "pink" | "blue" | "green" | "gray";
 export type Side = "right of" | "left of" | "below" | "above";
 
 /** One thing on the board. Keyed by id in `nodes`. */
 export interface FNode {
-  /** box (a step, the default) · pill (start or end) · diamond (a decision) · sticky · text · card · stamp · link */
+  /** box (a step, the default) · pill (start or end) · diamond (a decision) · sticky · text · card · stamp · link · chart */
   type?: NodeType;
   text?: string;
   /** The frame it lives in. Leave out for the loose area of the board. */
   frame?: string;
-  /** Sticky color (default yellow). */
-  /** A sticky's paper: a sticky color name or any hex. */
+  /** A sticky's paper: a sticky color name or any hex. A chart's accent: a marker color or any hex. */
   color?: StickyColor | string;
+  /** Charts: bar (default) · hbar · line · funnel · pie · donut. */
+  kind?: string;
+  /** Charts: the numbers, as [["Browse", 1200], ["Cart", 640]] or { "Browse": 1200, "Cart": 640 }. */
+  data?: [string, number][] | Record<string, number>;
+  /** Charts: the label(s) to call out in the accent color. */
+  highlight?: string | string[];
+  /** Charts: put on every number ("%", "$", "people"). */
+  unit?: string;
+  /** Charts: false hides the numbers. */
+  values?: boolean;
   /** Stickies and text: sit right beside this node. Stamps: sit on top of it. */
   near?: string;
   /** Stamps: which one (cursor, star, smiley…). */

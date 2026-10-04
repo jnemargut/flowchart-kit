@@ -11,6 +11,7 @@ import { homeFrame, layoutBoard, slides, type BoardLayout } from "./layout";
 import { embedSource } from "./png";
 import { boardSVG } from "./render/board";
 import { typeOf, type CardInfo, type Cards, type FlowchartFile } from "./types";
+import { chartRows, formatValue } from "../vendor/sketch/chart";
 
 export { initRenderer };
 
@@ -115,6 +116,7 @@ export function toJSONCanvas(doc: FlowchartFile, file: string, outDir: string, L
     const t = typeOf(n);
     if (t === "card" && cards[b.id]?.png) nodes.push({ ...base, type: "file", file: relative(outDir, cards[b.id].png!).split(sep).join("/") });
     else if (t === "link" && n.url) nodes.push({ ...base, type: "link", url: n.url });
+    else if (t === "chart") nodes.push({ ...base, type: "text", text: [n.text ? `**${n.text}**` : "", ...chartRows(n.data).map(([l, v]) => `- ${l}: ${formatValue(v, n.unit)}`)].filter(Boolean).join("\n") });
     else if (t === "stamp") nodes.push({ ...base, type: "text", text: `(${n.icon ?? "stamp"})` });
     else nodes.push({ ...base, type: "text", text: t === "diamond" ? `${n.text ?? ""}?`.replace(/\?\?$/, "?") : t === "card" ? n.ref ?? "" : n.text ?? "", ...(t === "sticky" && isHex(n.color) ? { color: normHex(n.color!) } : t !== "sticky" && isHex(n.fill) ? { color: normHex(n.fill!) } : t === "sticky" && CANVAS_COLOR[n.color ?? "yellow"] ? { color: CANVAS_COLOR[n.color ?? "yellow"] } : n.product ? { color: "5" } : {}) });
   }

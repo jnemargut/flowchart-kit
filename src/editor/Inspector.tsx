@@ -4,6 +4,7 @@ import { plainText, RichHTML } from "../../vendor/sketch/rich";
 import { COLORS } from "../../vendor/sketch/tools";
 import type { Result } from "../../vendor/sketch/suggest";
 import { MARKER } from "../../vendor/sketch/tokens";
+import { CHART_KIND_LABEL, CHART_KINDS, chartRows, chartText, parseChartText, type ChartRow } from "../../vendor/sketch/chart";
 import { hostOf, slides, type BoardLayout } from "../layout";
 import { parseRef } from "../refs";
 import { Stamp } from "../render/stamps";
@@ -13,6 +14,8 @@ import type { Key, Path } from "./model";
 
 export interface InspectorActions {
   set: (path: Path, value: unknown, coalesce?: string) => void;
+  /** Several changes as one edit (one undo step). */
+  setMany: (changes: [Path, unknown][], coalesce?: string) => void;
   select: (keys: Key[]) => void;
   remove: () => void;
   duplicate: () => void;
@@ -123,6 +126,63 @@ function Seg<T extends string>({ value, options, labels, onChange, title }: { va
 }
 const WEIGHT_LABEL = { thin: "Thin", normal: "Normal", thick: "Thick" } as const;
 
+/**
+ * A chart's numbers as text, one "label, number" a line. Paste cells from a spreadsheet straight in. What you type
+ * stays as you typed it; the chart follows along.
+ */
+function ChartData({ rows, onChange }: { rows: ChartRow[]; onChange: (rows: ChartRow[], unit?: string) => void }) {
+  const [text, setText] = useState(() => chartText(rows));
+  const [bad, setBad] = useState(0);
+  return (
+    <>
+      <textarea aria-label="Chart data" className="mono-in chart-data" rows={Math.min(10, Math.max(4, rows.length + 1))} value={text} spellCheck={false} placeholder={"Browse, 1200\nCart, 640"}
+        onChange={(e) => {
+          setText(e.target.value);
+          const r = parseChartText(e.target.value);
+          setBad(e.target.value.split(/\r?\n/).filter((l) => l.trim()).length - r.rows.length - (r.title ? 1 : 0));
+          onChange(r.rows, r.unit);
+        }} />
+      <p className="hint">{bad > 0 ? `${bad} line${bad === 1 ? " has" : "s have"} no number, so ${bad === 1 ? "it's" : "they're"} left out.` : "One per line: a label, then a number. Paste cells from a spreadsheet, too."}</p>
+    </>
+  );
+}
+
+/** Kind, numbers, what to call out, the unit and the accent color of a chart card. */
+function ChartLook({ n, id, P, a }: { n: FNode; id: string; P: (prop: string) => Path; a: InspectorActions }) {
+  const rows = chartRows(n.data);
+  const hl = new Set((Array.isArray(n.highlight) ? n.highlight : n.highlight ? [n.highlight] : []).map((h) => h.toLowerCase()));
+  const toggle = (l: string) => {
+    const next = hl.has(l.toLowerCase()) ? rows.map((r) => r[0]).filter((x) => hl.has(x.toLowerCase()) && x.toLowerCase() !== l.toLowerCase()) : [...rows.map((r) => r[0]).filter((x) => hl.has(x.toLowerCase())), l];
+    a.set(P("highlight"), next.length === 0 ? undefined : next.length === 1 ? next[0] : next);
+  };
+  return (
+    <>
+      <Field label="Kind" wide><Seg title="Chart kind" value={(CHART_KINDS as readonly string[]).includes(n.kind ?? "") ? (n.kind as (typeof CHART_KINDS)[number]) : "bar"} options={CHART_KINDS} labels={CHART_KIND_LABEL} onChange={(v) => a.set(P("kind"), v === "bar" ? undefined : v)} /></Field>
+      <Field label="Numbers" wide>
+        <ChartData key={id} rows={rows} onChange={(r, unit) => {
+          const changes: [Path, unknown][] = [[P("data"), r]];
+          // a "%" or "$" typed with the numbers becomes the unit (unless you've set one)
+          if (unit && !n.unit) changes.push([P("unit"), unit]);
+          // call-outs follow their labels; one whose row is gone is dropped
+          if (n.highlight !== undefined) { const keep = [...hl].map((h) => r.find((x) => x[0].toLowerCase() === h)?.[0]).filter((x): x is string => !!x); changes.push([P("highlight"), keep.length === 0 ? undefined : keep.length === 1 ? keep[0] : keep]); }
+          a.setMany(changes, `data:${id}`);
+        }} />
+      </Field>
+      {rows.length ? (
+        <Field label="Call out" wide>
+          <span className="chips">{rows.slice(0, 24).map(([l], i) => <button key={`${l}-${i}`} className={hl.has(l.toLowerCase()) ? "on" : ""} aria-pressed={hl.has(l.toLowerCase())} title="Show this one in the accent color" onClick={() => toggle(l)}>{l || "(no label)"}</button>)}</span>
+        </Field>
+      ) : null}
+      <Field label="Unit"><Text value={n.unit ?? ""} placeholder="%, $, people…" onChange={(v) => a.set(P("unit"), v.trim() ? v : undefined, `unit:${id}`)} /></Field>
+      <label className="field inline"><span>Show the numbers</span><input type="checkbox" checked={n.values !== false} onChange={(e) => a.set(P("values"), e.target.checked ? undefined : false)} /></label>
+      <Field label="Accent" wide>
+        <span className="swatches">{COLORS.map((c) => <button key={c} title={c} aria-label={c} className={(n.color ?? "") === c ? "on" : ""} onClick={() => a.set(P("color"), n.color === c ? undefined : c)}><span className="dot" style={{ background: MARKER[c] }} /></button>)}<AnyColor value={n.color} onPick={(h) => a.set(P("color"), h)} title="Any accent color" /></span>
+      </Field>
+      <Field label="Text size" wide><Seg value={n.size ?? "m"} options={TEXT_SIZES} labels={TEXT_SIZE_LABEL} onChange={(v) => a.set(P("size"), v === "m" ? undefined : v)} /></Field>
+    </>
+  );
+}
+
 /** Text size, fill, border color and weight for boxes, pills, decisions and text. */
 function NodeLook({ n, P, a, t }: { n: FNode; P: (prop: string) => Path; a: InspectorActions; t: string }) {
   const boxy = t !== "text";
@@ -181,7 +241,7 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
     return (
       <aside className="inspector">
         <h3>{NODE_TYPES[t].label}<small>{id}</small></h3>
-        {t !== "stamp" && t !== "card" ? <Field label={t === "link" ? "Title" : "Words"} wide><Text area={t !== "link"} value={n.text ?? ""} focusKey={focusText} onChange={(v) => a.set(P("text"), v || undefined, `text:${id}`)} /></Field> : null}
+        {t !== "stamp" && t !== "card" ? <Field label={t === "link" || t === "chart" ? "Title" : "Words"} wide><Text area={t !== "link" && t !== "chart"} value={n.text ?? ""} focusKey={focusText} onChange={(v) => a.set(P("text"), v || undefined, `text:${id}`)} /></Field> : null}
         {isFlow ? (
           <Field label="Shape" wide>
             <Seg value={t as "pill" | "box" | "diamond"} options={["pill", "box", "diamond"] as const} labels={{ pill: "Start / end", box: "Step", diamond: "Decision" }} onChange={(s) => a.set(P("type"), s === "box" ? undefined : s)} />
@@ -197,6 +257,7 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
         {t === "stamp" ? (
           <div className="stamp-pick">{Object.keys(STAMPS).map((s) => <button key={s} className={n.icon === s ? "on" : ""} title={`${s}: ${STAMPS[s]}`} aria-label={s} onClick={() => a.set(P("icon"), s)}><svg viewBox="0 0 48 48" width={26} height={26}><Stamp icon={s} x={0} y={0} s={46} /></svg></button>)}</div>
         ) : null}
+        {t === "chart" ? <ChartLook n={n} id={id} P={P} a={a} /> : null}
         {t === "card" ? (
           <>
             <Field label="Shows" wide><Text mono value={n.ref ?? ""} onChange={(v) => a.set(P("ref"), v, `ref:${id}`)} placeholder="./x.storyboard.json#panel" /></Field>
