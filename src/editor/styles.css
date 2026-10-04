@@ -291,3 +291,20 @@ a.btn { text-decoration: none; color: inherit; display: inline-block; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chips button { border: 1.5px solid var(--color-400); background: #fff; border-radius: 12px; padding: 1px 9px; font-size: var(--text-xs); cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chips button.on { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-paper); }
+
+/* Play: the slide is all that's on screen. The controls are a small bar at the bottom that shows when the mouse
+   moves and steps aside when it stops. */
+.play { position: fixed; }
+.play-bar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(28, 28, 30, .92); border: 1.5px solid var(--color-700); border-radius: 10px; box-shadow: 0 8px 28px rgba(0, 0, 0, .4); transition: opacity 260ms var(--ease), transform 260ms var(--ease); white-space: nowrap; }
+.play-bar.asleep { opacity: 0; transform: translateX(-50%) translateY(10px); pointer-events: none; }
+.play-bar button { background: none; color: var(--color-paper); border: 1.5px solid transparent; border-radius: 6px; padding: 3px 10px; font-size: var(--text-sm); }
+.play-bar button:hover:not(:disabled) { border-color: var(--color-600); }
+.play-bar button[aria-pressed="true"] { border-color: var(--color-paper); }
+.play-bar button:disabled { opacity: .3; }
+.play-bar button.nav { font-size: var(--text-base); padding: 1px 8px; }
+.play-bar .sep { width: 1px; height: 20px; background: var(--color-700); }
+.play-bar .play-count { min-width: 44px; text-align: center; }
+.play-foot { position: absolute; left: 50%; right: auto; top: 12px; bottom: auto; transform: translateX(-50%); z-index: 2; pointer-events: none; padding: 4px 12px; border-radius: 8px; background: rgba(28, 28, 30, .92); color: var(--color-200); white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis; }
+.play-body { padding: 14px 14px 62px; } /* room for the bar, so it never covers the bottom of what you're showing */
+.play-strip { padding-bottom: 68px; }
+@media (prefers-reduced-motion: reduce) { .play-bar { transition: none; } }

@@ -40,7 +40,7 @@ const NOTE_GAP = 18;
 /** A frame's description: its size and line height. */
 export const LEAD_SIZE = 22, LEAD_LH = 28;
 /** Room the reading-order number takes in front of a frame's title. */
-export const FRAME_NUM_W = 36;
+export const FRAME_NUM_W = 30;
 const STEP = 40;
 const LABEL_SIZE = 16;
 /** An arrow label's font size: s | m (default) | l | xl. */

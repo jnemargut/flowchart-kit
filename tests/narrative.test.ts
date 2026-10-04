@@ -127,9 +127,21 @@ describe("drawing", () => {
     expect(boardSVG({ title: "t", nodes: { a: { text: "A" } } })).not.toContain('stroke-dasharray="1 6"');
   });
 
-  it("numbers frames on the canvas", () => {
+  it("numbers frames on the canvas with a quiet numeral, not a badge", () => {
     const doc: FlowchartFile = { title: "t", frames: { a: { title: "One" }, b: { title: "Two" } }, nodes: { x: { text: "X", frame: "a" }, y: { text: "Y", frame: "b" } }, present: ["a", "b"] };
-    expect(boardSVG(doc)).toMatch(/<circle[^>]*r="14"/);
+    const svg = boardSVG(doc);
+    expect(svg).toMatch(/<text data-frame-title="a"[^>]*>1<\/text>/);
+    expect(svg).toMatch(/<text data-frame-title="b"[^>]*>2<\/text>/);
+    expect(svg).not.toMatch(/<circle[^>]*r="14"/);
+  });
+
+  it("draws a frame as a slide with no border and no number", () => {
+    const doc: FlowchartFile = { title: "t", frames: { a: { title: "One" }, b: { title: "Two" } }, nodes: { x: { text: "X", frame: "a" }, y: { text: "Y", frame: "b" } }, present: ["a", "b"] };
+    const slide = boardSVG(doc, { frame: "a", bare: true }), frame = boardSVG(doc, { frame: "a" });
+    expect(frame).toContain('stroke-dasharray="10 7"');
+    expect(slide).not.toContain('stroke-dasharray="10 7"');
+    expect(slide).not.toMatch(/<text data-frame-title="a"[^>]*>1<\/text>/);
+    expect(slide).toContain("One");
   });
 
   it("writes loose text from its left edge", () => {

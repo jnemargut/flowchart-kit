@@ -75,7 +75,7 @@ export async function toPDF(doc: FlowchartFile, file: string): Promise<Uint8Arra
     page.drawImage(e, { x: 0, y: 0, width: w * 0.75, height: h * 0.75 });
   };
   await add(png(boardSVG(doc, p), 2));
-  if (Object.keys(doc.frames ?? {}).length) for (const s of slides(doc, p.L)) await add(png(boardSVG(doc, { ...p, frame: s.id }), 2));
+  if (Object.keys(doc.frames ?? {}).length) for (const s of slides(doc, p.L)) await add(png(boardSVG(doc, { ...p, frame: s.id, bare: true }), 2)); // slide pages: no frame border
   return pdf.save();
 }
 
@@ -88,7 +88,7 @@ export async function toPPTX(doc: FlowchartFile, file: string): Promise<Buffer> 
   pptx.title = doc.title;
   const W = 13.333, H = 7.5, m = 0.35, head = 0.85;
   for (const s of slides(doc, p.L)) {
-    const img = png(boardSVG(doc, { ...p, frame: s.id || undefined }), 2);
+    const img = png(boardSVG(doc, { ...p, frame: s.id || undefined, bare: true }), 2);
     const iw = img.readUInt32BE(16), ih = img.readUInt32BE(20);
     const k = Math.min((W - m * 2) / iw, (H - head - m) / ih);
     const slide = pptx.addSlide();

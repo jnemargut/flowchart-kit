@@ -19,7 +19,7 @@ So that's what this is: a marker-and-paper canvas where your agent does the bori
 routing the arrows, finding room for the next frame) and you do the thinking. Everything's drawn by hand, so
 nobody mistakes it for a spec.
 
-![A whole board: numbered frames, each with a plain description, and notes tied to what they're about](docs/board-134b6b2.png)
+![A whole board: numbered frames, each with a plain description, and notes tied to what they're about](docs/board-173986e.png)
 
 ## Frames are the story
 
@@ -50,7 +50,7 @@ Flowchart Kit works great on its own. It's also the canvas where the other two k
 [Wireframe Kit](https://github.com/jnemargut/wireframe-kit) draws low-fi screens and flows. Put either on a board
 as a **card**: a whole storyboard, one panel, a whole flow, or one screen.
 
-![Cards: the order status screen and a storyboard panel, right in the flow](docs/cards-ed09d0e.png)
+![Cards: the order status screen and a storyboard panel, right in the flow](docs/cards-d2bd5e2.png)
 
 Cards point at the files (`"ref": "./late-latte.storyboard.json#asks"`), so they're never stale copies. Change
 the storyboard and the card catches up on its own. Copy a panel in Storyboard Kit, or a screen in Wireframe Kit,
@@ -179,7 +179,7 @@ what's installed.
 
 ## The editor bits
 
-![The editor: palette, stamps, cards nearby, and a selected step](docs/editor-55572f4.png)
+![The editor: palette, stamps, cards nearby, and a selected step](docs/editor-392a615.png)
 
 **Flowing**
 
@@ -220,10 +220,11 @@ add it next to what's selected, or drag it wherever you like.
 
 ## Present it
 
-![Play: a frame as a slide, sharpie, speaker notes and the slide strip](docs/play-f51348d.png)
+![Play: a frame as a slide, sharpie, speaker notes and the slide strip](docs/play-29306a9.png)
 
 Hit **Play** (or P). Each frame is a slide, in the order you set in the board's inspector, with a fade or a cut
-between them. No frames? You get the whole board.
+between them. No frames? You get the whole board. The slide is all that's on screen: the controls are a small
+bar that shows up when you move the mouse and steps aside when you stop.
 
 - → or Space for the next slide, ← to go back. A big pointer the room can follow.
 - **D** grabs the sharpie, **E** the eraser. Marks are saved with the board but only show up in Play.

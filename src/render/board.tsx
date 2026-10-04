@@ -34,6 +34,8 @@ export interface ArtOpts {
   hide?: Set<string>;
   /** Highlight a link (the editor's selection). */
   highlightEdge?: number;
+  /** Draw frames as slides: no dashed border and no reading-order number, just the title and what's inside. */
+  bare?: boolean;
   /** Where the wobble filter may draw. Pin it to the canvas when rendering a crop: a filter region hanging off the canvas crashes resvg. */
   region?: Box;
 }
@@ -188,13 +190,14 @@ export const EdgeLabel = ({ e, highlight }: { e: Edge; highlight?: boolean }) =>
   ? <text data-edge={e.i} x={e.lx} y={e.ly + e.ls * 0.32} textAnchor="middle" fontFamily={HAND} fontSize={e.ls} fill={highlight ? C.action : C.g8} stroke={C.paper} strokeWidth={6} strokeLinejoin="round" paintOrder="stroke">{richLines(e.label, [plainText(e.label)], highlight ? C.action : C.g8, e.ls)[0]}</text>
   : null;
 
-function FrameArt({ f, wob }: { f: BoardLayout["frames"][string]; wob?: string }) {
-  const tx = f.x + 26 + (f.n ? FRAME_NUM_W : 0);
+function FrameArt({ f, wob, bare }: { f: BoardLayout["frames"][string]; wob?: string; bare?: boolean }) {
+  const n = bare ? undefined : f.n;
+  const tx = f.x + 26 + (n ? FRAME_NUM_W : 0);
   return (
     <g data-frame={f.id}>
-      <rect x={f.x} y={f.y} width={f.w} height={f.h} rx={14} fill={C.paper} fillOpacity={0.7} stroke={C.g5} strokeWidth={2.2} strokeDasharray="10 7" filter={wob} />
-      {/* its place in the reading order */}
-      {f.n ? <g data-frame-title={f.id}><circle cx={f.x + 38} cy={f.y + 30} r={14} fill={C.g8} /><text x={f.x + 38} y={f.y + 37} textAnchor="middle" fontFamily={TITLE} fontSize={18} fill={C.paper}>{f.n}</text></g> : null}
+      {bare ? null : <rect x={f.x} y={f.y} width={f.w} height={f.h} rx={14} fill={C.paper} fillOpacity={0.7} stroke={C.g5} strokeWidth={2.2} strokeDasharray="10 7" filter={wob} />}
+      {/* its place in the reading order: a quiet numeral, so it doesn't compete with the title */}
+      {n ? <text data-frame-title={f.id} x={f.x + 26} y={f.y + 38} fontFamily={TITLE} fontSize={24} fill={C.g4}>{n}</text> : null}
       <text data-frame-title={f.id} x={tx} y={f.y + 38} fontFamily={TITLE} fontSize={24} fill={C.g8}>{richLines(f.title, [plainText(f.title)], C.g8, 24)[0]}</text>
       {/* the frame's point, in a sentence */}
       {f.lead.length ? <text data-frame-title={f.id} data-frame-lead={f.id} fontFamily={HAND} fontSize={LEAD_SIZE} fill={C.ink}>{f.lead.map((l, i) => <tspan key={i} x={f.x + 26} y={f.y + TITLE_H + 18 + i * LEAD_LH}>{l}</tspan>)}</text> : null}
@@ -241,7 +244,7 @@ export function BoardArt({ doc, L, o = {} }: { doc: FlowchartFile; L: BoardLayou
       <defs><WobbleFilter id={`${uid}-wob`} region={{ x: b.x, y: b.y, width: b.w, height: b.h }} scale={1.8} frequency={0.03} /></defs>
       {/* one wobble for everything hand drawn: a filter is a pass over its whole region, so once is much faster than per shape */}
       <g filter={wob}>
-        {frames.map((f) => <FrameArt key={f.id} f={f} />)}
+        {frames.map((f) => <FrameArt key={f.id} f={f} bare={o.bare} />)}
         <Shapes shapes={doc.shapes} prefix="" />
         {frames.map((f) => <Shapes key={f.id} shapes={doc.frames?.[f.id]?.shapes} dx={f.ox} dy={f.oy} prefix={f.id} />)}
         {/* a note beside something is tied to it by a faint dotted line, so it's clear what it's about */}

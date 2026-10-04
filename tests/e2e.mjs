@@ -347,11 +347,24 @@ ok("agent edits show up live", await until(async () => (await page.locator("svg.
 await page.keyboard.press("p");
 await page.waitForSelector(".play");
 ok("Play starts on the first slide", (await page.locator(".play-count").textContent()) === "1 / 3");
+// the slide is all that's on screen: no frame border, no number, the title once, and controls that step aside
+ok("a slide has no dashed frame border and no reading-order number", (await page.locator('.play-slide rect[stroke-dasharray="10 7"]').count()) === 0 && !(await page.locator(".play-slide [data-frame-title]").allTextContents()).some((t) => /^\d+$/.test(t.trim())));
+ok("the slide's title shows once", (await page.locator(".play-title").count()) === 0 && (await page.locator(".play-slide [data-frame-title]").first().textContent()).length > 3);
+ok("the sharpie's extra tools are tucked away until you draw", (await page.locator(".play-bar button", { hasText: "Eraser" }).count()) === 0);
+await page.mouse.move(700, 400); await page.mouse.move(710, 410);
+ok("moving the mouse shows the controls", await until(async () => !(await page.locator(".play-bar").getAttribute("class")).includes("asleep")));
+ok("they step aside when the mouse stops", await until(async () => (await page.locator(".play-bar").getAttribute("class")).includes("asleep"), 6000));
+ok("the hint goes away too", await until(async () => (await page.locator(".play-foot").count()) === 0, 6000));
+await page.mouse.move(720, 420);
+await page.locator(".play-bar button[aria-label='Next']").click();
+ok("the bar's arrows change slides", (await page.locator(".play-count").textContent()) === "2 / 3");
+await page.keyboard.press("ArrowLeft");
 await page.keyboard.press("ArrowRight");
 ok("→ goes to the next slide", (await page.locator(".play-count").textContent()) === "2 / 3");
 await page.keyboard.press("n");
 ok("N shows the speaker notes", (await page.locator(".play-notes").textContent()).includes("8am"));
 await page.keyboard.press("d");
+ok("drawing brings out the eraser and keeps the controls up", (await page.locator(".play-bar button", { hasText: "Eraser" }).count()) === 1 && !(await page.locator(".play-bar").getAttribute("class")).includes("asleep"));
 const sl = await page.locator(".play-slide").boundingBox();
 await page.mouse.move(sl.x + 100, sl.y + 100); await page.mouse.down(); await page.mouse.move(sl.x + 220, sl.y + 160, { steps: 6 }); await page.mouse.up();
 await until(() => read().markup?.late?.length === 1);
