@@ -133,7 +133,8 @@ A storyboard, a storyboard panel, a wireframe flow or screen, or an image, point
 
 ## Frame properties
 
-- `title`: the name on the frame (and the slide title in Play)
+- `title`: the name on the frame (and the slide title in Play). Name it for its point, not its topic
+- `lead`: the frame's point in one sentence, written large under the title (what it shows and why it matters)
 - `near`: ["right of" | "left of" | "below" | "above", "<frame id>"]: placed next to that frame, in the nearest free spot
 - `dir`: "right" (default) or "down": which way its flow runs
 - `notes`: speaker notes for when it's a slide

@@ -1,6 +1,6 @@
 /** Pure edits on a board. Each returns a new document; the app saves it. */
 import { homeFrame, layoutBoard, type BoardLayout } from "../layout";
-import { isNote, type Cards, type FlowchartFile, type FNode } from "../types";
+import { isNote, typeOf, type Cards, type FlowchartFile, type FNode } from "../types";
 
 export type Path = (string | number)[];
 /** Selection keys: "node:<id>", "frame:<id>", "edge:<index>", "shape:<frame id or empty>:<index>". */
@@ -248,7 +248,7 @@ export function moveEach(doc: FlowchartFile, L: BoardLayout, moves: { k: Key; dx
 }
 
 /** The look of a thing, to paste onto others of the same kind. */
-export interface StyleClip { kind: "node" | "edge" | "shape"; props: Record<string, unknown> }
+export interface StyleClip { kind: "node" | "edge" | "shape"; props: Record<string, unknown>; /** for a node: its type (a sticky's color is paper, a chart's is an accent) */ type?: string }
 const STYLE_PROPS: Record<StyleClip["kind"], string[]> = {
   node: ["fill", "stroke", "weight", "size", "color"],
   edge: ["style", "shape", "head", "color", "weight", "size"],
@@ -260,5 +260,12 @@ export function styleOf(doc: FlowchartFile, k: Key): StyleClip | undefined {
   const o = getAt(doc, propPath(k)) as Record<string, unknown> | undefined;
   if (!o) return undefined;
   // every style prop, so pasting also clears what the source doesn't have (back to the default)
-  return { kind, props: Object.fromEntries(STYLE_PROPS[kind].map((p) => [p, o[p]])) };
+  return { kind, props: Object.fromEntries(STYLE_PROPS[kind].map((p) => [p, o[p]])), ...(kind === "node" ? { type: typeOf(o as FNode) } : {}) };
+}
+
+/** Can this style property go onto that thing? `color` means different things on a sticky and on a chart, and nothing elsewhere. */
+export function styleFits(doc: FlowchartFile, clip: StyleClip, k: Key, prop: string): boolean {
+  if (clip.kind !== "node" || prop !== "color") return true;
+  const t = typeOf((getAt(doc, propPath(k)) ?? {}) as FNode);
+  return (t === "sticky" || t === "chart") && t === clip.type;
 }

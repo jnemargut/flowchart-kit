@@ -5,7 +5,7 @@ import { shapeBox } from "../../vendor/sketch/shapes";
 import type { Result } from "../../vendor/sketch/suggest";
 import { TOOL_KEYS, Tools, type DrawTool } from "../../vendor/sketch/tools";
 import { fitView, type View } from "../../vendor/sketch/view";
-import { center, frameAt, homeFrame, layoutBoard, slides, type BoardLayout, type Box, shapeBounds } from "../layout";
+import { center, frameAt, FRAME_NUM_W, freeSpot, homeFrame, layoutBoard, measure, slides, type BoardLayout, type Box, shapeBounds } from "../layout";
 import { textWidth } from "../text";
 import { isNote, typeOf, type Cards, type FlowchartFile, type FNode, type Side4 } from "../types";
 import { validate } from "../validate";
@@ -200,7 +200,7 @@ export function App() {
     } else if (kind === "frame") {
       const f = Lx.frames[id];
       if (!f) return;
-      setEditing({ key, value: d.frames?.[id]?.title ?? id, box: { x: f.x + 22, y: f.y + 12, w: Math.max(220, textWidth(f.title, "title", 24) + 30), h: 36 }, size: 24, face: "title", multiline: false, align: "left" });
+      setEditing({ key, value: d.frames?.[id]?.title ?? id, box: { x: f.x + 22 + (f.n ? FRAME_NUM_W : 0), y: f.y + 12, w: Math.max(220, textWidth(f.title, "title", 24) + 30), h: 36 }, size: 24, face: "title", multiline: false, align: "left" });
     } else if (kind === "edge") {
       const e = Lx.edges.find((x) => x.i === Number(id));
       if (!e) return;
@@ -345,7 +345,7 @@ export function App() {
       for (const k of sel) {
         const kind = k.split(":")[0];
         if (kind !== styleClip.kind) continue;
-        for (const [prop, v] of Object.entries(styleClip.props)) d = M.setAt(d, [...M.propPath(k), prop], v);
+        for (const [prop, v] of Object.entries(styleClip.props)) if (M.styleFits(d, styleClip, k, prop)) d = M.setAt(d, [...M.propPath(k), prop], v);
         n++;
       }
       if (!n) return flash(`That style is for ${styleClip.kind === "node" ? "boxes" : styleClip.kind === "edge" ? "arrows" : "drawings"}.`);
@@ -677,8 +677,11 @@ export function App() {
       if (t === "card") { edit(d); setSel([`node:${r.id}`]); } else addAndEdit({ doc: d, id: r.id });
       return;
     }
+    // a click (not a drag) has no exact spot in mind: land near the pointer, clear of what's already there
     const c = pointer.current && L && inView(pointer.current) ? pointer.current : viewCenter();
-    add(p, c);
+    const s = measure(n);
+    const spot = freeSpot({ x: c.x - s.w / 2, y: c.y - s.h / 2, w: s.w, h: s.h }, Object.values(base.nodes).filter((b) => b.type !== "stamp"));
+    add(p, { x: spot.x + s.w / 2, y: spot.y + s.h / 2 });
   };
   const inView = (pt: { x: number; y: number }) => {
     const r = canvasEl.current?.getBoundingClientRect();

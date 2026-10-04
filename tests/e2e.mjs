@@ -369,6 +369,29 @@ ok("Properties hides the panel", (await page.locator(".inspector").count()) === 
 await page.keyboard.press("Meta+Backslash");
 ok("Cmd+\\ brings it back", (await page.locator(".inspector").count()) === 1);
 
+// a frame says its point: the lead is typed in the panel, shows under the title, and undoes
+{
+  await page.keyboard.press("Escape"); await page.keyboard.press("Escape");
+  await page.keyboard.press("Meta+0");
+  await sleep(300);
+  await click(await frameTitle("ideas"));
+  await page.locator(".inspector h3", { hasText: /^Frame/ }).waitFor();
+  const h0 = await page.evaluate(() => window.__fc.L.frames.ideas.h);
+  const lead0 = read().frames.ideas.lead;
+  const long = "Three ways to tell people the truth about the wait, parked until next week's test, with the one I'd try first starred, and a ticket to follow.";
+  await page.getByPlaceholder(/What this frame shows/).fill(long);
+  ok("a frame's point saves as its lead", await until(() => read().frames.ideas.lead === long));
+  ok("it's written on the canvas, under the title", await until(async () => (await page.locator('svg.board [data-frame-lead="ideas"]').textContent())?.includes("parked until next week")));
+  ok("the frame grows to fit a longer one", await until(async () => (await page.evaluate(() => window.__fc.L.frames.ideas.h)) > h0));
+  ok("the board is still valid with a lead", /is valid/.test(cli("validate", file)));
+  ok("critique runs from the CLI", /easier to read cold|reads on its own/.test(cli("critique", file)));
+  await page.locator("svg.board [data-frame-lead='ideas']").click({ force: true });
+  ok("clicking the lead picks the frame", (await sel())[0] === "frame:ideas", JSON.stringify(await sel()));
+  await page.keyboard.press("Meta+z");
+  ok("undo brings the old lead back", await until(() => read().frames.ideas.lead === lead0));
+  await page.keyboard.press("Escape");
+}
+
 // charts: add one from the palette, type numbers, pick a kind, call one out, edit the title in place, paste a sheet
 {
   const charts = () => Object.entries(read().nodes).filter(([, n]) => n.type === "chart");
@@ -377,6 +400,7 @@ ok("Cmd+\\ brings it back", (await page.locator(".inspector").count()) === 1);
   const before = charts().length;
   await page.locator(".palette .tile", { has: page.locator(".name", { hasText: /^Chart$/ }) }).click();
   ok("the Chart tile adds a chart", await until(() => charts().length === before + 1));
+  ok("it lands clear of what's already there", await until(async () => page.evaluate(() => { const { L } = window.__fc; const c = Object.values(L.nodes).find((b) => b.type === "chart"); return !!c && !Object.values(L.nodes).some((b) => b.id !== c.id && b.type !== "stamp" && b.x < c.x + c.w && c.x < b.x + b.w && b.y < c.y + c.h && c.y < b.y + b.h); })));
   const id = charts().map(([k]) => k).find((k) => !Object.keys(Object.fromEntries(charts().slice(0, before))).includes(k)) ?? charts().at(-1)[0];
   const node = () => read().nodes[id];
   await page.locator(".inspector h3", { hasText: /^Chart/ }).waitFor();

@@ -312,6 +312,7 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
       <aside className="inspector">
         <h3>Frame<small>{id}</small></h3>
         <Field label="Title" wide><Text value={f.title ?? ""} focusKey={focusText} onChange={(v) => a.set(P("title"), v || undefined, `ftitle:${id}`)} /></Field>
+        <Field label="Its point" wide><Text area value={f.lead ?? ""} placeholder="What this frame shows, in a sentence. It's written large under the title." onChange={(v) => a.set(P("lead"), v || undefined, `flead:${id}`)} /></Field>
         <Field label="Speaker notes" wide><Text area value={f.notes ?? ""} placeholder="What to point out when this is on screen" onChange={(v) => a.set(P("notes"), v || undefined, `notes:${id}`)} /></Field>
         <Field label="Web link" wide><Text mono value={f.url ?? ""} placeholder="https://… (the spec, the epic, the prototype)" onChange={(v) => a.set(P("url"), v || undefined, `furl:${id}`)} /></Field>
         <Field label="Flow runs">

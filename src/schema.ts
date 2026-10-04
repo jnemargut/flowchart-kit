@@ -25,6 +25,7 @@ export function buildSchema() {
           type: "object", additionalProperties: false,
           properties: {
             title: { type: "string", description: FRAME_PROPS.title },
+            lead: { type: "string", description: FRAME_PROPS.lead },
             near: { description: FRAME_PROPS.near, type: "array", items: [{ enum: SIDES }, { type: "string" }], minItems: 2, maxItems: 2 },
             dir: { enum: ["right", "down"], description: FRAME_PROPS.dir },
             notes: { type: "string", description: FRAME_PROPS.notes },

@@ -106,22 +106,44 @@ with short relative paths. Storyboards and wireframes feed each other, so go in 
    `wf validate` each, then `wf render <file>` so every screen has a picture.
 3. **Storyboard, wired**: point its phones at the real screens (`"screen": "./today.wireframe.json#status"`),
    then `sb validate` and `sb critique`, and fix what makes it truer.
-4. **The board** (almost always): `<topic>.flowchart.json`. This is what the designer opens and presents. Default
-   frames, in story order (drop the ones you don't need):
+4. **The board** (almost always): `<topic>.flowchart.json`. This is what the designer opens and presents, and it
+   has to read on its own: someone opening it cold should get the point in ten seconds and read the rest as the
+   evidence. It's an argument, not a wall of thoughts. So, whatever the recipe:
+   - **The answer comes first.** The first frame's `lead` says what you found, in a sentence or two ("Probably
+     not. Lenders shrug at late; what stops them lending is damage."). Under it, at most a couple of stickies:
+     what it costs, what you'd try instead.
+   - **Every frame makes one point and says it** in its `lead`, and is named for that point ("Lateness isn't
+     what stops people lending"), not its topic ("Research"). The titles alone should tell the story.
+   - **Notes go in columns under headings**, never in a pile: a short `text` heading, then its stickies, then the
+     next heading. Keep what was found (yellow), what you're assuming or parking (gray) and what isn't settled
+     (pink: questions, worries, what something costs) apart. Sources go in the frame they back up, as `link`
+     cards (a file the designer gave you: a relative path if it's in the folder, else its full path).
+   - **Notes about a step sit beside it** with `near`.
+   - **It ends on what's needed**: what you'd do, what has to be decided, the questions still open.
+   - **`present`** lists the frames in the order of the argument (they're numbered on the canvas). Lay them
+     out in rows of two or three, like a comic, so the whole board fits on a screen: the first row left to right
+     (`"near": ["right of", …]`), then the fourth frame `"near": ["below", "<the first frame>"]` and on to its
+     right. Five or six frames is plenty.
+
+   Default frames, in story order (drop the ones you don't need):
+   - **The answer** (name it for the question or the finding): the lead, and one or two stickies.
    - **The ask**: a `link` card per ticket or doc (`"url"`), the requirements as yellow stickies, the "why" as
-     text. Faithful to the source: this frame is the requester's view, not yours.
+     text. Faithful to the source: this frame is the requester's view, not yours. Its lead says what the ask
+     rests on.
    - **What actually happens**: the storyboard as cards (the whole board, or the 2 or 3 panels that matter), linked
      in order, with stickies where it hurts and a `frown` stamp on the worst moment. If there's data on how often
      it happens, one rough `chart` beside the panel it's about: the panel shows why, the chart shows how many.
    - **The ask, as a flow**: steps and decisions of what's being requested, with wireframe screens as cards. Mark
-     where it breaks: a red `stroke` on the step, a red sticky saying why.
+     where it breaks: a red `stroke` on the step, a pink sticky beside it saying why.
    - **Options**: one frame each (2 or 3 at most). Each a short flow, its key screen as a card, and a green sticky for
      what it gets right, a pink one for what it costs. A `star` stamp on the one you'd pick, if you'd pick one.
    - **Questions for the PM**: pink stickies, each one answerable. Assumptions you made: gray stickies starting with
      "Assuming…".
    Place frames by relation (`"near": ["right of", "ask"]`), set `present` to the story order, and give each
-   frame `notes` (what to say when it's on screen). `fc validate`, then `fc render` and *look at the PNG*: fix
-   anything crowded, cut off or confusing.
+   frame a `lead` and `notes` (what to say when it's on screen). `fc validate`, then `fc critique` and fix what
+   it finds (it checks the board reads on its own), then `fc render` and *look at the PNG* (and
+   `fc render <file>#<frame id>` for a close look at one frame): read only the frame titles and leads, in order. If that isn't the whole argument, rewrite them until it is. Then fix anything
+   crowded, cut off or confusing.
 
 Charts are rough on purpose: one per point, two or three numbers that matter, `highlight` on the one to look at,
 and a sticky with the takeaway beside it. A dashboard of charts is a sign you haven't found the point yet.
@@ -137,9 +159,10 @@ site maps, cutting scope, assumptions and risks, usability tests, before and aft
 ## 5. Hand it over
 
 Open the board: `fc dev <topic>/<topic>.flowchart.json` (in the background), and give the designer the URL. Then a
-short message, not a report:
+short message, not a report, that says the same thing the board does, in the same order:
+- The answer, in the words of the first frame's lead.
+- How to read the board: the frames by number, one line each (their leads). "Press Play and it walks you through."
 - What you made, in a line per artifact, with its file.
-- What you think, in two or three sentences: where the ask holds up, where it doesn't, what you'd do.
 - The questions you'd take back to the PM, in a list.
 - What you assumed.
 
@@ -169,5 +192,7 @@ if it's installed); say so rather than over-polishing low-fi artifacts.
 - Don't write a long document. If you catch yourself writing paragraphs, put them on stickies.
 - Don't invent facts the tickets don't say. Mark guesses as assumptions.
 - Don't make every artifact possible. Make the ones that answer this question.
+- Don't hand over a wall of thoughts. If the frame titles and leads, read in order, aren't the whole argument,
+  the board isn't done.
 - Don't argue in prose with the ask. Show it: the storyboard panel where it fails beats a paragraph about why.
 - Never mention other tools by name as inspiration in anything you write for the designer's stakeholders.

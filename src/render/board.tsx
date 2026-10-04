@@ -9,7 +9,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MarkupStrokes, ShapeMark, type SketchShape } from "../../vendor/sketch/shapes";
 import { C, OFFSET } from "../../vendor/sketch/tokens";
 import { WobbleFilter } from "../../vendor/sketch/wobble";
-import { hostOf, layoutBoard, slides, TITLE_H, type Box, type BoardLayout, type Edge, type NodeBox } from "../layout";
+import { FRAME_NUM_W, LEAD_LH, LEAD_SIZE, hostOf, layoutBoard, slides, TITLE_H, type Box, type BoardLayout, type Edge, type NodeBox } from "../layout";
 import type { CardInfo, Cards, FlowchartFile, FNode } from "../types";
 import { FILLS, LINE_COLORS, STICKY, WEIGHT_PX } from "../vocab";
 import type { StickyColor } from "../types";
@@ -44,12 +44,13 @@ const PRODUCT_FILL = "#e6f5f6";
 /** A small, stable tilt for each sticky, so a wall of them looks stuck on by hand. */
 const tilt = (id: string) => { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) | 0; return ((Math.abs(h) % 5) - 2) * 0.8; };
 
-function Words({ b, src, color = C.ink, top }: { b: NodeBox; src?: string; color?: string; top?: number }) {
+/** A node's words, centered in it; `left` starts them at its left edge instead (loose text reads like writing). */
+function Words({ b, src, color = C.ink, top, left }: { b: NodeBox; src?: string; color?: string; top?: number; left?: boolean }) {
   const lh = b.size * 1.22;
   const y0 = top ?? b.y + b.h / 2 - (b.lines.length * lh) / 2 + b.size * 0.8;
   return (
-    <text textAnchor="middle" fontFamily={HAND} fontSize={b.size} fill={color}>
-      {richLines(src ?? "", b.lines, color, b.size).map((l, i) => <tspan key={i} x={b.x + b.w / 2} y={y0 + i * lh}>{l || " "}</tspan>)}
+    <text textAnchor={left ? "start" : "middle"} fontFamily={HAND} fontSize={b.size} fill={color}>
+      {richLines(src ?? "", b.lines, color, b.size).map((l, i) => <tspan key={i} x={left ? b.x + 4 : b.x + b.w / 2} y={y0 + i * lh}>{l || " "}</tspan>)}
     </text>
   );
 }
@@ -82,7 +83,7 @@ function NodeArt({ b, n, o, wob }: { b: NodeBox; n: FNode; o: ArtOpts; wob?: str
   const off = `translate(${OFFSET.x} ${OFFSET.y})`;
   if (b.type === "text") {
     const bg = chosen && chosen !== "none" ? <rect x={b.x - 6} y={b.y - 4} width={b.w + 12} height={b.h + 8} rx={4} fill={chosen} stroke={n.stroke && n.stroke !== "none" ? ink : "none"} strokeWidth={line.strokeWidth} /> : null;
-    return <g data-node={b.id}><rect x={b.x} y={b.y} width={b.w} height={b.h} fill="transparent" />{bg}<Words b={b} src={n.text} color={darkFace ? C.paper : n.stroke && n.stroke !== "none" && !bg ? ink : C.g8} /></g>;
+    return <g data-node={b.id}><rect x={b.x} y={b.y} width={b.w} height={b.h} fill="transparent" />{bg}<Words b={b} src={n.text} left color={darkFace ? C.paper : n.stroke && n.stroke !== "none" && !bg ? ink : C.g8} /></g>;
   }
   if (b.type === "link") {
     const url = n.url ?? "";
@@ -188,12 +189,29 @@ export const EdgeLabel = ({ e, highlight }: { e: Edge; highlight?: boolean }) =>
   : null;
 
 function FrameArt({ f, wob }: { f: BoardLayout["frames"][string]; wob?: string }) {
+  const tx = f.x + 26 + (f.n ? FRAME_NUM_W : 0);
   return (
     <g data-frame={f.id}>
       <rect x={f.x} y={f.y} width={f.w} height={f.h} rx={14} fill={C.paper} fillOpacity={0.7} stroke={C.g5} strokeWidth={2.2} strokeDasharray="10 7" filter={wob} />
-      <text data-frame-title={f.id} x={f.x + 26} y={f.y + 38} fontFamily={TITLE} fontSize={24} fill={C.g8}>{richLines(f.title, [plainText(f.title)], C.g8, 24)[0]}</text>
+      {/* its place in the reading order */}
+      {f.n ? <g data-frame-title={f.id}><circle cx={f.x + 38} cy={f.y + 30} r={14} fill={C.g8} /><text x={f.x + 38} y={f.y + 37} textAnchor="middle" fontFamily={TITLE} fontSize={18} fill={C.paper}>{f.n}</text></g> : null}
+      <text data-frame-title={f.id} x={tx} y={f.y + 38} fontFamily={TITLE} fontSize={24} fill={C.g8}>{richLines(f.title, [plainText(f.title)], C.g8, 24)[0]}</text>
+      {/* the frame's point, in a sentence */}
+      {f.lead.length ? <text data-frame-title={f.id} data-frame-lead={f.id} fontFamily={HAND} fontSize={LEAD_SIZE} fill={C.ink}>{f.lead.map((l, i) => <tspan key={i} x={f.x + 26} y={f.y + TITLE_H + 18 + i * LEAD_LH}>{l}</tspan>)}</text> : null}
     </g>
   );
+}
+
+/** The stretch of the line between two boxes' middles that's outside both: where a note's tether shows. */
+function tether(a: Box, b: Box): [number, number, number, number] | undefined {
+  const [ax, ay] = [a.x + a.w / 2, a.y + a.h / 2], [bx, by] = [b.x + b.w / 2, b.y + b.h / 2];
+  const dx = bx - ax, dy = by - ay;
+  if (!dx && !dy) return undefined;
+  // how far along the line each box's edge is, from its own middle
+  const edge = (r: Box) => Math.min(dx ? (r.w / 2 + 3) / Math.abs(dx) : Infinity, dy ? (r.h / 2 + 3) / Math.abs(dy) : Infinity);
+  const t0 = edge(a), t1 = 1 - edge(b);
+  if (t1 - t0 < 0.02 || Math.hypot(dx, dy) * (t1 - t0) < 8) return undefined;
+  return [ax + dx * t0, ay + dy * t0, ax + dx * t1, ay + dy * t1];
 }
 
 /** Drawings in the back layer (default) or, with `front`, in front of the boxes and cards. */
@@ -226,6 +244,11 @@ export function BoardArt({ doc, L, o = {} }: { doc: FlowchartFile; L: BoardLayou
         {frames.map((f) => <FrameArt key={f.id} f={f} />)}
         <Shapes shapes={doc.shapes} prefix="" />
         {frames.map((f) => <Shapes key={f.id} shapes={doc.frames?.[f.id]?.shapes} dx={f.ox} dy={f.oy} prefix={f.id} />)}
+        {/* a note beside something is tied to it by a faint dotted line, so it's clear what it's about */}
+        {nodes.filter((n) => n.type !== "stamp" && doc.nodes[n.id]?.near && L.nodes[doc.nodes[n.id].near!] && !o.hide?.has(doc.nodes[n.id].near!)).map((n) => {
+          const t = tether(n, L.nodes[doc.nodes[n.id].near!]);
+          return t ? <path key={`t-${n.id}`} d={`M${t[0]} ${t[1]} L${t[2]} ${t[3]}`} fill="none" stroke={C.g5} strokeWidth={1.6} strokeLinecap="round" strokeDasharray="1 6" /> : null;
+        })}
         {L.edges.map((e) => <EdgeArt key={e.i} e={e} highlight={o.highlightEdge === e.i} />)}
         {L.edges.map((e) => <EdgeLabel key={e.i} e={e} highlight={o.highlightEdge === e.i} />)}
         {runs[0] && !runs[0].cards ? runs[0].list.map((n) => <NodeArt key={n.id} b={n} n={doc.nodes[n.id]} o={o} />) : null}

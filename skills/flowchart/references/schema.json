@@ -22,7 +22,11 @@
         "properties": {
           "title": {
             "type": "string",
-            "description": "the name on the frame (and the slide title in Play)"
+            "description": "the name on the frame (and the slide title in Play). Name it for its point, not its topic"
+          },
+          "lead": {
+            "type": "string",
+            "description": "the frame's point in one sentence, written large under the title (what it shows and why it matters)"
           },
           "near": {
             "description": "[\"right of\" | \"left of\" | \"below\" | \"above\", \"<frame id>\"]: placed next to that frame, in the nearest free spot",

@@ -13,7 +13,7 @@ import type { StickyColor } from "./types";
 export type { Result };
 
 const NODE_KEYS = ["type", "text", "frame", "color", "kind", "data", "highlight", "unit", "values", "near", "icon", "at", "ref", "url", "sketch", "crop", "mirror", "turn", "locked", "group", "product", "size", "fill", "stroke", "weight"];
-const FRAME_KEYS = ["title", "near", "dir", "notes", "url", "shapes", "size"];
+const FRAME_KEYS = ["title", "lead", "near", "dir", "notes", "url", "shapes", "size"];
 const okUrl = (u: unknown) => typeof u === "string" && /^(https?:\/\/|mailto:|figma:|file:|\.{0,2}\/)\S+$/i.test(u.trim());
 const LINK_KEYS = ["from", "to", "label", "style", "shape", "head", "color", "weight", "fromSide", "toSide", "bend", "size"];
 /** One of a fixed set, with a "did you mean". */

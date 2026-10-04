@@ -1,9 +1,24 @@
 {
   "title": "What happens when the order runs late",
   "frames": {
-    "happy": { "title": "Happy path", "notes": "This is the flow we designed for. It works when the shop is quiet." },
-    "late": { "title": "When it runs late", "near": ["right of", "happy"], "notes": "This is what actually happens at 8am. The app keeps saying 4 minutes and Marcus asks a human." },
-    "ideas": { "title": "Ideas", "near": ["below", "late"], "notes": "Three directions to test next week.", "url": "https://example.atlassian.net/browse/ORDER-400" }
+    "happy": {
+      "title": "On time, it just works",
+      "lead": "The flow we designed for: order ahead, walk in, grab it and go.",
+      "notes": "This is the flow we designed for. It works when the shop is quiet."
+    },
+    "late": {
+      "title": "Late, nobody tells them, so they ask a human",
+      "lead": "At 8am the app keeps saying 4 minutes. This is where trust breaks.",
+      "near": ["right of", "happy"],
+      "notes": "This is what actually happens at 8am. The app keeps saying 4 minutes and Marcus asks a human."
+    },
+    "ideas": {
+      "title": "Three ways to tell the truth about the wait",
+      "lead": "Parked for next week's test. The star is the one I'd try first.",
+      "near": ["below", "late"],
+      "notes": "Three directions to test next week.",
+      "url": "https://example.atlassian.net/browse/ORDER-400"
+    }
   },
   "nodes": {
     "leave": { "type": "pill", "text": "Leaves home", "frame": "happy" },
@@ -11,7 +26,6 @@
     "ready": { "type": "diamond", "text": "Ready on time?", "frame": "happy" },
     "go": { "type": "pill", "text": "Grabs it and goes", "frame": "happy" },
     "eta": { "type": "sticky", "text": "The app promises 4 minutes", "near": "order" },
-
     "wait": { "text": "Waits at the counter", "frame": "late" },
     "check": { "text": "Checks the app: still says 4 min", "frame": "late", "product": true },
     "screen": { "type": "card", "ref": "./order-ahead.wireframe.json#status", "frame": "late" },
@@ -22,12 +36,24 @@
     "tap": { "type": "stamp", "icon": "cursor", "near": "screen", "at": [0.5, 0.36] },
     "sad": { "type": "stamp", "icon": "frown", "near": "ask" },
     "trust": { "type": "text", "text": "where **trust** breaks", "near": "ask" },
-
+    "h-tell": { "type": "text", "text": "**Tell them**", "frame": "ideas" },
     "text-me": { "type": "sticky", "text": "Text me when it's actually ready", "color": "blue", "frame": "ideas" },
     "queue": { "type": "sticky", "text": "Show the real queue, not a timer", "color": "blue", "frame": "ideas" },
+    "h-staff": { "type": "text", "text": "**Let staff fix it**", "frame": "ideas" },
     "bump": { "type": "sticky", "text": "Let the barista bump the ETA", "color": "green", "frame": "ideas" },
-    "refund": { "type": "sticky", "text": "Refunds for really late orders (later)", "color": "gray", "frame": "ideas" },
-    "ticket": { "type": "link", "text": "ORDER-412: late order alerts", "url": "https://example.atlassian.net/browse/ORDER-412", "frame": "ideas" },
+    "h-later": { "type": "text", "text": "**Later**", "frame": "ideas" },
+    "refund": {
+      "type": "sticky",
+      "text": "Refunds for really late orders (later)",
+      "color": "gray",
+      "frame": "ideas"
+    },
+    "ticket": {
+      "type": "link",
+      "text": "ORDER-412: late order alerts",
+      "url": "https://example.atlassian.net/browse/ORDER-412",
+      "frame": "ideas"
+    },
     "best": { "type": "stamp", "icon": "star", "near": "text-me" }
   },
   "links": [

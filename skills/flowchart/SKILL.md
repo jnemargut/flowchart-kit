@@ -32,21 +32,44 @@ path. **Below, `fc` is short for that whole command.**
    [references/format.md](references/format.md). Worked example: [references/example.md](references/example.md).
 4. **Validate and fix** until clean: `fc validate <file>`. Errors say exactly what to change ("did you mean …").
    Warnings catch real problems (a decision with one way out, unlabeled answers, steps that should be stickies).
-5. **Open the editor** in the background (it keeps running): `fc dev <file>`. Tell the designer the URL.
+5. **Check it reads on its own**: `fc critique <file>`. It tells you when a board is a pile of thoughts
+   instead of an argument: no answer up front, frames that name a topic, stickies of equal weight in a heap.
+   Fix what it finds (a brainstorm wall can ignore it).
+6. **Look at what you made.** `fc render <file>` writes `<name>.png` (`<file>#<frame id>` renders one
+   frame, for a closer look). Read it and fix anything crowded or confusing before you say you're done.
+7. **Open the editor** in the background (it keeps running): `fc dev <file>`. Tell the designer the URL.
    Their tweaks save into the same file in real time.
-6. **Look at what you made.** `fc render <file>` writes `<name>.png`. Read it and fix anything crowded or
-   confusing before you say you're done.
-7. **Iterate on the same file.** Re-read it before each edit, because the designer may have changed things.
+8. **Iterate on the same file.** Re-read it before each edit, because the designer may have changed things.
    Their touches are theirs: `layout` (nudges and sizes), `canvas` (where frames sit), `shapes` (their
    drawings, on the board or in a frame) and `markup` (Play-mode sharpie). Keep them unless asked. You can read
    them, though: a red circle or a scribbled word is often feedback for you.
-8. **Present**: frames are slides, in `present` order. `fc export <file> --pdf` (board plus a page per frame)
+9. **Present**: frames are slides, in `present` order. `fc export <file> --pdf` (board plus a page per frame)
    or `--pptx` (a slide per frame, with each frame's `notes` as speaker notes).
 
 ## Craft: what makes a board useful
 
-- **Frames are the unit.** Group a board into frames by story beat: "Happy path", "When it runs late",
-  "Ideas", "Open questions". Each becomes a slide. Place new ones by relation, never coordinates:
+**A board is an argument, not a wall of thoughts.** Someone opening it cold should get the point in ten seconds
+and read the rest as the evidence:
+
+- **The answer first.** The first frame says what you found, in its `lead`: "Probably not. Lenders shrug at
+  late; what stops them lending is damage." If the board's title is a question, this is where it's answered.
+- **Every frame makes one point, and says it.** `lead` is the frame's point in a sentence, written large under
+  its title. Name frames for their point ("Lateness isn't what stops people lending"), not their topic
+  ("Research"), so the titles alone tell the story.
+- **A reading order.** List the frames in `present` in the order of the argument; they get numbered on the
+  canvas. Place them in rows of two or three with `near`, like a comic, so the board fits on a screen: a row
+  left to right, then the next row `"near": ["below", "<the first frame>"]`.
+- **Notes in groups, under headings.** Loose notes read like an outline, in the order you write them: a short
+  `text` followed by stickies becomes a column with the text as its heading, so write heading, its notes, next
+  heading, its notes. Two to four columns a frame. Keep what was found, what you're assuming and what's still
+  open in separate columns. Never leave six stickies in a pile.
+- **Notes about a step sit beside it.** `near` ties a sticky to its step with a dotted line; without it nobody
+  can tell what the note is about.
+- **End on what's needed**: what you'd do, what has to be decided, or the questions still open.
+- **Less.** A dozen words a sticky, 5 to 15 things a frame, five frames or so. Cut what doesn't earn its place.
+
+- **Frames are the unit.** Group a board into frames by story beat (how it should go, what really happens,
+  what to try, what's still open), each named for its point. Each becomes a slide. Place new ones by relation, never coordinates:
   `"near": ["right of", "happy"]`, and the canvas finds the nearest free spot.
 - **Never write coordinates.** Flows lay themselves out (left to right, or `"dir": "down"`). You say what's
   connected; the layout does the rest, and the designer's drags are kept on top.
@@ -58,7 +81,7 @@ path. **Below, `fc` is short for that whole command.**
 - **Teal means the product.** `"product": true` marks the steps where the product shows up; the rest is the
   person's own world. Like in a storyboard, the contrast is the point.
 - **Stickies carry the thinking.** Pink for questions and worries, blue for ideas, green for what works, gray
-  for parked, yellow for everything else.
+  for parked or assumed, yellow for everything else (what you found).
 - **Stamps point at things.** A `cursor` on a wireframe card shows the tap, a `star` marks the best idea, a
   `frown` marks where it hurts: `{ "type": "stamp", "icon": "cursor", "near": "status", "at": [0.5, 0.8] }`.
 - **Numbers, roughly.** When a number makes the point ("most people drop off at the cart", "8 of 12 asked

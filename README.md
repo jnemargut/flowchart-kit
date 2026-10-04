@@ -19,13 +19,24 @@ So that's what this is: a marker-and-paper canvas where your agent does the bori
 routing the arrows, finding room for the next frame) and you do the thinking. Everything's drawn by hand, so
 nobody mistakes it for a spec.
 
-![A whole board: a happy path, what really happens, and ideas](docs/board-5bb34b4.png)
+![A whole board: numbered frames, each saying its point, with notes tied to what they're about](docs/board-d7bfdb4.png)
 
 ## Frames are the story
 
-A board is a few **frames**: "Happy path", "When it runs late", "Ideas", "Open questions". Your agent says where
-each one goes ("right of the happy path") and the canvas finds the nearest free spot. Flows inside a frame lay
-themselves out, so nobody ever writes a coordinate. When you drag something, your drag wins and sticks.
+A board is a few **frames**, and each one makes a point. Your agent says where each one goes ("right of the
+first one") and the canvas finds the nearest free spot. Flows inside a frame lay themselves out, so nobody ever
+writes a coordinate. When you drag something, your drag wins and sticks.
+
+A board should read on its own, so it's built like an argument, not a wall of thoughts:
+
+- **Every frame says its point**, in a sentence under its title, and is named for that point ("Late, nobody tells
+  them, so they ask a human"), not its topic. The first frame gives the answer.
+- **Frames are numbered** in the order you'd read them.
+- **Notes read like an outline.** A short heading followed by stickies becomes a column, so what was found, what's
+  assumed and what's still open don't end up in one pile.
+- **Notes about a step are tied to it** with a dotted line, so nobody has to guess what a sticky is about.
+
+`fc critique` checks a board for all of that, and your agent runs it before it hands anything over.
 
 Then hit **Play** and the frames are slides, in your order.
 
@@ -36,7 +47,7 @@ Flowchart Kit works great on its own. It's also the canvas where the other two k
 [Wireframe Kit](https://github.com/jnemargut/wireframe-kit) draws low-fi screens and flows. Put either on a board
 as a **card**: a whole storyboard, one panel, a whole flow, or one screen.
 
-![Cards: the order status screen and a storyboard panel, right in the flow](docs/cards-8be384f.png)
+![Cards: the order status screen and a storyboard panel, right in the flow](docs/cards-41575b4.png)
 
 Cards point at the files (`"ref": "./late-latte.storyboard.json#asks"`), so they're never stale copies. Change
 the storyboard and the card catches up on its own. Copy a panel in Storyboard Kit, or a screen in Wireframe Kit,
@@ -165,7 +176,7 @@ what's installed.
 
 ## The editor bits
 
-![The editor: palette, stamps, cards nearby, and a selected step](docs/editor-31e1e5a.png)
+![The editor: palette, stamps, cards nearby, and a selected step](docs/editor-c0d7407.png)
 
 **Flowing**
 
@@ -206,7 +217,7 @@ add it next to what's selected, or drag it wherever you like.
 
 ## Present it
 
-![Play: a frame as a slide, sharpie, speaker notes and the slide strip](docs/play-3b524f6.png)
+![Play: a frame as a slide, sharpie, speaker notes and the slide strip](docs/play-cf74049.png)
 
 Hit **Play** (or P). Each frame is a slide, in the order you set in the board's inspector, with a fade or a cut
 between them. No frames? You get the whole board.
@@ -231,6 +242,7 @@ fc() { node ~/.claude/skills/flowchart/scripts/flowchart.mjs "$@"; }
 fc vocab                         # node types, sticky colors, stamps, frame and link options
 fc cards                         # storyboards and wireframes nearby, with their panels and screens
 fc validate late-order.flowchart.json
+fc critique late-order.flowchart.json          # does it read on its own?
 fc dev late-order.flowchart.json
 fc render late-order.flowchart.json            # the board as a PNG
 fc export late-order.flowchart.json --pdf --pptx --canvas

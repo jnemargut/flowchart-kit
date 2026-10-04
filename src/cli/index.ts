@@ -12,6 +12,7 @@ import type { FlowchartFile } from "../types";
 import { formatResult, validate } from "../validate";
 import { FRAME_PROPS, LINK_PROPS, NODE_PROPS, NODE_TYPES, SIDES, STAMPS, STICKY } from "../vocab";
 import { dev } from "./dev";
+import { critique, formatCritique } from "../critique";
 
 /** This script lives in <skill>/scripts/flowchart.mjs, so the skill folder is one level up. */
 const SKILL_ROOT = fileURLToPath(new URL("../", import.meta.url));
@@ -26,6 +27,7 @@ Usage: ${RUN} <command> [options]
   new <file> [--title "…"]        Create a starter board
   vocab [--json]                  Node types, sticky colors, stamps, frame and link properties
   validate <file> [--json]        Check a board; errors include fixes
+  critique <file> [--json]        Does it read on its own? The answer up front, a point per frame, a reading order
   kits                            Which kits are installed (Storyboard, Wireframe, Flowchart) and how to run each
   cards [file|dir]                Storyboards and wireframes nearby (with panels/screens), and how each card on a board is doing
   dev [file] [--port 4500]        Open the canvas editor (--no-open); edits save to the file live
@@ -199,6 +201,13 @@ async function main() {
       if (flags.json) console.log(JSON.stringify(r, null, 2));
       else console.log(formatResult(r, pos[0], r.ok ? doc : undefined));
       process.exit(r.ok ? 0 : 1);
+    }
+    case "critique": {
+      const { doc } = load(pos[0]);
+      requireValid(doc, pos[0]);
+      const notes = critique(doc);
+      console.log(flags.json ? JSON.stringify(notes, null, 2) : formatCritique(notes, pos[0]));
+      return;
     }
     case "cards": return cards(pos[0]);
     case "kits": return kits();

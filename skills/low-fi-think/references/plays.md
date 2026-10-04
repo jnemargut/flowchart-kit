@@ -2,6 +2,13 @@
 
 Recipes for common situations. Mix and trim; these are starting points, not templates to fill in.
 
+**Every board, whatever the recipe, reads on its own.** The frames below are what goes *after* a first frame
+that gives the answer. So: a first frame whose `lead` says what you found; a `lead` on every frame (its point
+in a sentence) and a title that names the point, not the topic; notes in columns under short `text` headings,
+never in a pile; `present` in the order of the argument; and a last frame for what's needed next. The recipes
+name frames by what goes in them ("The ask", "Options"); rename each for what it turns out to say ("The ask
+fixes the timer, not the wait"). `fc critique` checks all of this.
+
 ## Push back on a request ("the PM wants X")
 
 The designer suspects the ask treats a symptom.
@@ -9,7 +16,7 @@ The designer suspects the ask treats a symptom.
 1. Gather the tickets. Find the user moment the ask is about.
 2. **Storyboard** that moment as it happens today (the trigger before the product, the workaround people use, how
    it feels). The insight usually lives in the workaround panel.
-3. **Board**: The ask (link cards) → What actually happens (storyboard cards) → The ask, as a flow (with where it
+3. **Board**: The answer (does the ask fix the real problem?) → The ask (link cards) → What actually happens (storyboard cards) → The ask, as a flow (with where it
    breaks marked) → One or two alternatives → Questions for the PM. If there's data that points at the real
    problem (most people drop off before the step the ask is about), a chart of it in "What actually happens" is
    the strongest argument you have. If there isn't, a pink sticky: "What would tell us which problem this is?"
@@ -22,7 +29,8 @@ human. Option B texts him instead. Three questions before we pick."
 
 1. Read everything. Pull every distinct point out as a sticky (one idea each, a few words).
 2. **Board**: cluster the stickies into frames by theme (3 to 6), named for what the cluster *means* ("People don't
-   trust the ETA"), not its topic ("ETA").
+   trust the ETA"), not its topic ("ETA"). Inside a frame, sub-group under text headings if there are more than
+   five stickies. The first frame says what the mess adds up to.
 3. Add a frame **What this means** with 2 or 3 text notes, and **Open questions** with pink stickies.
 4. Storyboard or flowchart only if one theme clearly needs it.
 

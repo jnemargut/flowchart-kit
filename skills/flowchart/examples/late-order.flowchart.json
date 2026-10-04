@@ -3,11 +3,13 @@
   "title": "What happens when the order runs late",
   "frames": {
     "happy": {
-      "title": "Happy path",
+      "title": "On time, it just works",
+      "lead": "The flow we designed for: order ahead, walk in, grab it and go.",
       "notes": "This is the flow we designed for. It works when the shop is quiet."
     },
     "late": {
-      "title": "When it runs late",
+      "title": "Late, nobody tells them, so they ask a human",
+      "lead": "At 8am the app keeps saying 4 minutes. This is where trust breaks.",
       "near": [
         "right of",
         "happy"
@@ -15,7 +17,8 @@
       "notes": "This is what actually happens at 8am. The app keeps saying 4 minutes and Marcus asks a human."
     },
     "ideas": {
-      "title": "Ideas",
+      "title": "Three ways to tell the truth about the wait",
+      "lead": "Parked for next week's test. The star is the one I'd try first.",
       "near": [
         "below",
         "late"
@@ -105,6 +108,11 @@
       "text": "where **trust** breaks",
       "near": "ask"
     },
+    "h-tell": {
+      "type": "text",
+      "text": "**Tell them**",
+      "frame": "ideas"
+    },
     "text-me": {
       "type": "sticky",
       "text": "Text me when it's actually ready",
@@ -117,10 +125,20 @@
       "color": "blue",
       "frame": "ideas"
     },
+    "h-staff": {
+      "type": "text",
+      "text": "**Let staff fix it**",
+      "frame": "ideas"
+    },
     "bump": {
       "type": "sticky",
       "text": "Let the barista bump the ETA",
       "color": "green",
+      "frame": "ideas"
+    },
+    "h-later": {
+      "type": "text",
+      "text": "**Later**",
       "frame": "ideas"
     },
     "refund": {

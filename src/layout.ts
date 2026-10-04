@@ -7,12 +7,21 @@ import { normTurn } from "../vendor/sketch/crop";
  */
 import dagre from "@dagrejs/dagre";
 import { shapeBox, type SketchShape, shapeTextSize } from "../vendor/sketch/shapes";
+import { plainText } from "../vendor/sketch/rich";
 import { textWidth, wrap } from "./text";
 import { frameOf, isNote, typeOf, type Cards, type FlowchartFile, type FNode, type NodeType, type Side } from "./types";
 
 export interface Box { x: number; y: number; w: number; h: number }
 export interface NodeBox extends Box { id: string; type: NodeType; frame: string; lines: string[]; size: number }
-export interface FrameBox extends Box { id: string; title: string; /** where frame coordinates start (frame shapes and markup are relative to it) */ ox: number; oy: number; loose: boolean }
+export interface FrameBox extends Box {
+  id: string; title: string;
+  /** where frame coordinates start (frame shapes and markup are relative to it) */
+  ox: number; oy: number; loose: boolean;
+  /** the lead sentence under the title, wrapped to the frame */
+  lead: string[];
+  /** its place in the reading order (1, 2, 3…), when the board has one */
+  n?: number;
+}
 export interface Edge {
   i: number; from: string; to: string; d: string;
   start: [number, number]; startAngle: number; end: [number, number]; angle: number;
@@ -28,6 +37,10 @@ const PAD = 32;
 export const TITLE_H = 56;
 export const FRAME_GAP = 120;
 const NOTE_GAP = 18;
+/** A frame's lead sentence: its size and line height. */
+export const LEAD_SIZE = 22, LEAD_LH = 28;
+/** Room the reading-order number takes in front of a frame's title. */
+export const FRAME_NUM_W = 36;
 const STEP = 40;
 const LABEL_SIZE = 16;
 /** An arrow label's font size: s | m (default) | l | xl. */
@@ -97,6 +110,8 @@ export function measure(n: FNode, nudge: { w?: number; h?: number } = {}, card?:
 
 /** "jira.example.com" from a URL, for labels. */
 export function hostOf(url: string): string {
+  // a file (file:///… or ./notes/brief.md) is named by the file, not by "file:"
+  if (/^(file:|\.{0,2}\/)/i.test(url.trim())) return decodeURIComponent(url.trim().replace(/[?#].*$/, "").replace(/\/+$/, "").split("/").pop() ?? "");
   const m = /^[a-z][a-z0-9+.-]*:\/\/([^/?#]+)/i.exec(url.trim());
   return (m ? m[1] : url.trim().replace(/^www\./, "").split(/[/?#]/)[0]).replace(/^www\./, "");
 }
@@ -313,15 +328,71 @@ function layoutFrame(doc: FlowchartFile, fid: string, ids: string[], cards: Card
     flowBottom = Math.max(...flowIds.map((id) => boxes[id].y + boxes[id].h));
   }
 
-  // everything else in the frame: a tidy grid under the flow
+  // everything else in the frame reads like an outline, in the order it's written, under the flow:
+  // big text starts a section, text followed by notes heads a column of them, and loose notes line up in a grid
   if (rest.length) {
-    const cols = Math.min(4, Math.max(1, Math.ceil(Math.sqrt(rest.length))));
-    let y = flowIds.length ? flowBottom + 56 : top, x = left, rowH = 0;
-    rest.forEach((id, i) => {
-      if (i && i % cols === 0) { y += rowH + 28; x = left; rowH = 0; }
-      put(id, x, y);
-      x += sizes[id].w + 28;
-      rowH = Math.max(rowH, sizes[id].h);
+    const isText = (id: string) => typeOf(nodes[id]) === "text";
+    const big = (id: string) => nodes[id].size === "l" || nodes[id].size === "xl";
+    type Block = { kind: "para"; id: string } | { kind: "row"; ids: string[] } | { kind: "cols"; cols: { head: string; ids: string[] }[] };
+    const blocks: Block[] = [];
+    for (let i = 0; i < rest.length;) {
+      const id = rest[i];
+      let j = i + 1;
+      if (!isText(id)) {
+        while (j < rest.length && !isText(rest[j])) j++;
+        blocks.push({ kind: "row", ids: rest.slice(i, j) });
+      } else {
+        while (j < rest.length && !isText(rest[j])) j++;
+        const after = rest.slice(i + 1, j);
+        if (after.length && !big(id)) {
+          const last = blocks[blocks.length - 1];
+          if (last?.kind === "cols") last.cols.push({ head: id, ids: after }); else blocks.push({ kind: "cols", cols: [{ head: id, ids: after }] });
+        } else {
+          blocks.push({ kind: "para", id });
+          if (after.length) blocks.push({ kind: "row", ids: after });
+        }
+      }
+      i = j;
+    }
+    // a line of text on its own gets room to run (unless the designer sized it)
+    for (const b of blocks) {
+      const heads = b.kind === "para" ? [b.id] : b.kind === "cols" ? b.cols.map((c) => c.head) : [];
+      for (const id of heads) {
+        if (doc.layout?.[id]?.w) continue;
+        const natural = textWidth(plainText(nodes[id].text ?? ""), "hand", sizes[id].size) + 14;
+        const max = b.kind === "para" ? 640 : Math.max(200, ...(b.kind === "cols" ? b.cols.find((c) => c.head === id)!.ids.map((x) => sizes[x].w) : []));
+        if (natural > sizes[id].w || b.kind === "cols") sizes[id] = measure(nodes[id], { ...doc.layout?.[id], w: Math.round(Math.min(max, natural)) }, cards[id]);
+      }
+    }
+    let y = flowIds.length ? flowBottom + 56 : top;
+    blocks.forEach((b, bi) => {
+      if (b.kind === "para") {
+        put(b.id, left, y);
+        y += sizes[b.id].h + (blocks[bi + 1]?.kind === "para" ? 10 : 16);
+      } else if (b.kind === "row") {
+        const cols = Math.min(4, Math.max(1, Math.ceil(Math.sqrt(b.ids.length))));
+        let x = left, rowH = 0;
+        b.ids.forEach((id, i) => {
+          if (i && i % cols === 0) { y += rowH + 28; x = left; rowH = 0; }
+          put(id, x, y);
+          x += sizes[id].w + 28;
+          rowH = Math.max(rowH, sizes[id].h);
+        });
+        y += rowH + 32;
+      } else {
+        // columns side by side, each a heading with its notes stacked under it; a new line after about four
+        let x = left, lineH = 0;
+        b.cols.forEach((c, ci) => {
+          if (ci && ci % 4 === 0) { y += lineH + 36; x = left; lineH = 0; }
+          const w = Math.max(sizes[c.head].w, ...c.ids.map((id) => sizes[id].w));
+          put(c.head, x, y);
+          let cy = y + sizes[c.head].h + 12;
+          for (const id of c.ids) { put(id, x, cy); cy += sizes[id].h + 18; }
+          lineH = Math.max(lineH, cy - 18 - y);
+          x += w + 40;
+        });
+        y += lineH + 36;
+      }
     });
   }
 
@@ -523,16 +594,24 @@ export function layoutBoard(doc: FlowchartFile, cards: Cards = {}): BoardLayout 
   }
   const locals: Record<string, Local> = {};
   const localBox: Record<string, Box> = {};
+  const leads: Record<string, string[]> = {};
+  // the reading order: frames in `present` are numbered, once there's more than one
+  const order = (Array.isArray(doc.present) ? doc.present : []).filter((f, i, a) => typeof f === "string" && doc.frames?.[f] && a.indexOf(f) === i);
+  const numbers: Record<string, number> = order.length > 1 ? Object.fromEntries(order.map((f, i) => [f, i + 1])) : {};
   for (const f of fids) {
     locals[f] = layoutFrame(doc, f, members[f], cards);
     const c = locals[f].content;
     if (f === "") { localBox[f] = c ?? { x: 0, y: 0, w: 0, h: 0 }; continue; }
     const size = doc.frames?.[f]?.size;
     const title = doc.frames?.[f]?.title ?? f;
-    const minW = Math.max(size?.[0] ?? 0, textWidth(title, "title", 24) + PAD * 2, 240);
+    const lead = typeof doc.frames?.[f]?.lead === "string" ? doc.frames[f].lead!.trim() : "";
+    const minW = Math.max(size?.[0] ?? 0, textWidth(plainText(title), "title", 24) + PAD * 2 + (numbers[f] ? FRAME_NUM_W : 0), 240, lead ? 440 : 0);
     const minH = Math.max(size?.[1] ?? 0, TITLE_H + 120);
-    const x0 = Math.min(0, (c?.x ?? PAD) - PAD), y0 = Math.min(0, (c?.y ?? TITLE_H) - TITLE_H);
+    const x0 = Math.min(0, (c?.x ?? PAD) - PAD);
     const x1 = Math.max(minW, (c ? c.x + c.w : 0) + PAD), y1 = Math.max(minH, (c ? c.y + c.h : 0) + PAD);
+    // the lead sits between the title and the contents: the frame grows upward to make room, so nothing inside moves
+    leads[f] = lead ? wrap(lead, "hand", LEAD_SIZE, x1 - x0 - 52) : [];
+    const y0 = Math.min(0, (c?.y ?? TITLE_H) - TITLE_H) - (leads[f].length ? leads[f].length * LEAD_LH + 12 : 0);
     localBox[f] = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
   }
 
@@ -559,7 +638,8 @@ export function layoutBoard(doc: FlowchartFile, cards: Cards = {}): BoardLayout 
       if (t) {
         side = rel[0];
         if (side === "left of") want = [t.x - FRAME_GAP - lb.w, t.y];
-        else if (side === "below") want = [t.x, t.y + t.h + FRAME_GAP];
+        // below a frame means below its whole row (the frames level with it), so rows of frames stay tidy
+        else if (side === "below") want = [t.x, Math.max(...Object.entries(placed).filter(([id, q]) => id !== "" && Math.abs(q.y - t.y) < 1).map(([, q]) => q.y + q.h), t.y + t.h) + FRAME_GAP];
         else if (side === "above") want = [t.x, t.y - FRAME_GAP - lb.h];
         else want = [t.x + t.w + FRAME_GAP, t.y];
       }
@@ -603,7 +683,7 @@ export function layoutBoard(doc: FlowchartFile, cards: Cards = {}): BoardLayout 
     const [ox, oy] = origin[f];
     for (const b of Object.values(locals[f].boxes)) nodes[b.id] = shift(b, ox, oy);
     for (const e of locals[f].edges) edges.push({ ...e, d: shiftPath(e.d, ox, oy), start: [e.start[0] + ox, e.start[1] + oy], end: [e.end[0] + ox, e.end[1] + oy], lx: e.lx + ox, ly: e.ly + oy });
-    frames[f] = { id: f, title: f === "" ? "" : doc.frames?.[f]?.title ?? f, ox, oy, loose: f === "", ...placed[f] };
+    frames[f] = { id: f, title: f === "" ? "" : doc.frames?.[f]?.title ?? f, ox, oy, loose: f === "", lead: leads[f] ?? [], ...(numbers[f] ? { n: numbers[f] } : {}), ...placed[f] };
   }
   // links between frames (or between a frame and the loose area)
   (doc.links ?? []).forEach((l, i) => {

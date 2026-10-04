@@ -4,9 +4,13 @@
 {
   "title": "What happens when the order runs late",
   "frames": {                              // keyed by id; each one is a slide in Play
-    "happy": { "title": "Happy path", "notes": "What we designed for." },
-    "late": { "title": "When it runs late", "near": ["right of", "happy"] },   // placed by relation
-    "ideas": { "title": "Ideas", "near": ["below", "late"], "url": "https://…/browse/ORDER-400" }
+    "happy": { "title": "On time, it just works",                      // named for its point, not its topic
+               "lead": "The flow we designed for: order ahead, walk in, grab it and go.",   // the point, written large
+               "notes": "What we designed for." },                     // speaker notes for Play
+    "late": { "title": "Late, nobody tells them, so they ask a human", "lead": "This is where trust breaks.",
+              "near": ["right of", "happy"] },                         // placed by relation
+    "ideas": { "title": "Three ways to tell the truth about the wait", "lead": "The star is the one I'd try first.",
+               "near": ["below", "late"], "url": "https://…/browse/ORDER-400" }
   },
   "nodes": {                               // keyed by id; every node goes in a frame (or none: the loose area)
     "leave": { "type": "pill", "text": "Leaves home", "frame": "happy" },
@@ -15,6 +19,8 @@
     "eta": { "type": "sticky", "text": "The app promises 4 minutes", "near": "order" }, // sits beside "order"
     "screen": { "type": "card", "ref": "./order-ahead.wireframe.json#status", "frame": "late" },
     "tap": { "type": "stamp", "icon": "cursor", "near": "screen", "at": [0.5, 0.36] },   // on top of the card
+    "h-tell": { "type": "text", "text": "**Tell them**", "frame": "ideas" },            // a heading: the stickies after it
+    "text-me": { "type": "sticky", "text": "Text me when it's ready", "color": "blue", "frame": "ideas" },   // stack under it
     "ticket": { "type": "link", "text": "ORDER-412: late order alerts", "url": "https://…/ORDER-412", "frame": "ideas" }
   },
   "links": [
@@ -53,8 +59,11 @@ add land next to whatever they're linked to. Don't remove pins unless asked; the
 for that.
 
 **Layout** is automatic. Each frame's linked nodes become a flow, laid out left to right (`"dir": "down"` on
-the frame for top to bottom). Unlinked things (a wall of stickies) line up in a tidy grid under the flow.
-Notes with `near` go beside their node; stamps go on top of theirs. You never write coordinates.
+the frame for top to bottom). Unlinked things go under the flow and read like an outline, in the order they're
+written: a `text` followed by stickies (or cards, charts, links) becomes a column headed by that text, columns sit
+side by side, a large text (`"size": "l"` or `"xl"`) starts a new section across the frame, and stickies with no
+heading line up in a grid. Notes with `near` go beside their node, tied to it with a dotted line; stamps go on top
+of theirs. You never write coordinates.
 
 **Frames** go where `near` says: `"right of"`, `"left of"`, `"below"` or `"above"` another frame,
 in the nearest free spot. Without `near`, each goes to the right of the last. Once the designer drags one,

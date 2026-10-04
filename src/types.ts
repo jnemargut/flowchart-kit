@@ -64,6 +64,8 @@ export type Side4 = "left" | "right" | "top" | "bottom";
 
 export interface Frame {
   title?: string;
+  /** The frame's point in a sentence, written large under its title: what it shows and why it matters. */
+  lead?: string;
   /** Where this frame goes, next to another one: ["right of", "happy"]. The canvas finds the nearest free spot. */
   near?: [Side, string];
   /** Which way its flow runs: "right" (default) or "down". */
