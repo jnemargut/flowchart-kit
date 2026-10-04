@@ -11,19 +11,19 @@ later, asks, commute) and `order-ahead.wireframe.json` (screens: menu, drink, ca
   "title": "What happens when the order runs late",
   "frames": {
     "happy": {
-      "title": "On time, it just works",
-      "lead": "The flow we designed for: order ahead, walk in, grab it and go.",
+      "title": "When the order is on time, it works",
+      "description": "This is the flow we designed for. You order ahead, walk in, grab your drink and go.",
       "notes": "This is the flow we designed for. It works when the shop is quiet."
     },
     "late": {
-      "title": "Late, nobody tells them, so they ask a human",
-      "lead": "At 8am the app keeps saying 4 minutes. This is where trust breaks.",
+      "title": "When the order is late, people ask the barista",
+      "description": "At 8am the app still says 4 minutes. Nobody tells people it's late, so they stop trusting it.",
       "near": ["right of", "happy"],
       "notes": "This is what actually happens at 8am. The app keeps saying 4 minutes and Marcus asks a human."
     },
     "ideas": {
-      "title": "Three ways to tell the truth about the wait",
-      "lead": "Parked for next week's test. The star is the one I'd try first.",
+      "title": "Three ideas for telling people how long the wait really is",
+      "description": "We'll test these next week. I'd start with the one that has a star.",
       "near": ["below", "late"],
       "notes": "Three directions to test next week.",
       "url": "https://example.atlassian.net/browse/ORDER-400"
@@ -36,7 +36,7 @@ later, asks, commute) and `order-ahead.wireframe.json` (screens: menu, drink, ca
     "go": { "type": "pill", "text": "Grabs it and goes", "frame": "happy" },
     "eta": { "type": "sticky", "text": "The app promises 4 minutes", "near": "order" },
     "wait": { "text": "Waits at the counter", "frame": "late" },
-    "check": { "text": "Checks the app: still says 4 min", "frame": "late", "product": true },
+    "check": { "text": "Checks the app. It still says 4 min", "frame": "late", "product": true },
     "screen": { "type": "card", "ref": "./order-ahead.wireframe.json#status", "frame": "late" },
     "ask": { "text": "Asks the barista", "frame": "late", "stroke": "red", "weight": "thick" },
     "panel": { "type": "card", "ref": "./late-latte.storyboard.json#asks", "frame": "late" },

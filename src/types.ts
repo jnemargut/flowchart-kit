@@ -64,7 +64,9 @@ export type Side4 = "left" | "right" | "top" | "bottom";
 
 export interface Frame {
   title?: string;
-  /** The frame's point in a sentence, written large under its title: what it shows and why it matters. */
+  /** What this frame shows, in a plain sentence or two. Written large under its title. */
+  description?: string;
+  /** The old name for `description`. Still read, never written. */
   lead?: string;
   /** Where this frame goes, next to another one: ["right of", "happy"]. The canvas finds the nearest free spot. */
   near?: [Side, string];
@@ -154,3 +156,6 @@ export interface CardInfo {
   problem?: string;
 }
 export type Cards = Record<string, CardInfo>;
+
+/** A frame's description (or, in older files, its `lead`). */
+export const frameDescription = (f?: Frame): string => (typeof f?.description === "string" && f.description.trim() ? f.description : typeof f?.lead === "string" ? f.lead : "").trim();

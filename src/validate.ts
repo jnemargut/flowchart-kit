@@ -13,7 +13,7 @@ import type { StickyColor } from "./types";
 export type { Result };
 
 const NODE_KEYS = ["type", "text", "frame", "color", "kind", "data", "highlight", "unit", "values", "near", "icon", "at", "ref", "url", "sketch", "crop", "mirror", "turn", "locked", "group", "product", "size", "fill", "stroke", "weight"];
-const FRAME_KEYS = ["title", "lead", "near", "dir", "notes", "url", "shapes", "size"];
+const FRAME_KEYS = ["title", "description", "lead", "near", "dir", "notes", "url", "shapes", "size"];
 const okUrl = (u: unknown) => typeof u === "string" && /^(https?:\/\/|mailto:|figma:|file:|\.{0,2}\/)\S+$/i.test(u.trim());
 const LINK_KEYS = ["from", "to", "label", "style", "shape", "head", "color", "weight", "fromSide", "toSide", "bend", "size"];
 /** One of a fixed set, with a "did you mean". */
@@ -54,6 +54,8 @@ export function validate(doc: FlowchartFile): Result {
         else if (!frames[f.near[1]]) { const s = suggest(String(f.near[1]), frameIds); err(`${p}.near[1]`, `There's no frame "${f.near[1]}".`, s ? `Did you mean "${s}"?` : `Frames: ${frameIds.join(", ")}`); }
       }
     }
+    if (f.description !== undefined && typeof f.description !== "string") err(`${p}.description`, '"description" is a sentence or two of text.');
+    if (f.lead !== undefined) warn(`${p}.lead`, '"lead" is now called "description".', 'Rename it to "description". It still shows for now.');
     if (f.url !== undefined && !okUrl(f.url)) err(`${p}.url`, `"${f.url}" doesn't look like a web address.`, 'Start it with https://, e.g. "https://www.figma.com/proto/…"');
     if (f.dir !== undefined && f.dir !== "right" && f.dir !== "down") err(`${p}.dir`, `"dir" is "right" or "down".`);
   }

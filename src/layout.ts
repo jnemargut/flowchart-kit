@@ -9,7 +9,7 @@ import dagre from "@dagrejs/dagre";
 import { shapeBox, type SketchShape, shapeTextSize } from "../vendor/sketch/shapes";
 import { plainText } from "../vendor/sketch/rich";
 import { textWidth, wrap } from "./text";
-import { frameOf, isNote, typeOf, type Cards, type FlowchartFile, type FNode, type NodeType, type Side } from "./types";
+import { frameDescription, frameOf, isNote, typeOf, type Cards, type FlowchartFile, type FNode, type NodeType, type Side } from "./types";
 
 export interface Box { x: number; y: number; w: number; h: number }
 export interface NodeBox extends Box { id: string; type: NodeType; frame: string; lines: string[]; size: number }
@@ -17,7 +17,7 @@ export interface FrameBox extends Box {
   id: string; title: string;
   /** where frame coordinates start (frame shapes and markup are relative to it) */
   ox: number; oy: number; loose: boolean;
-  /** the lead sentence under the title, wrapped to the frame */
+  /** the description under the title, wrapped to the frame */
   lead: string[];
   /** its place in the reading order (1, 2, 3…), when the board has one */
   n?: number;
@@ -37,7 +37,7 @@ const PAD = 32;
 export const TITLE_H = 56;
 export const FRAME_GAP = 120;
 const NOTE_GAP = 18;
-/** A frame's lead sentence: its size and line height. */
+/** A frame's description: its size and line height. */
 export const LEAD_SIZE = 22, LEAD_LH = 28;
 /** Room the reading-order number takes in front of a frame's title. */
 export const FRAME_NUM_W = 36;
@@ -604,12 +604,12 @@ export function layoutBoard(doc: FlowchartFile, cards: Cards = {}): BoardLayout 
     if (f === "") { localBox[f] = c ?? { x: 0, y: 0, w: 0, h: 0 }; continue; }
     const size = doc.frames?.[f]?.size;
     const title = doc.frames?.[f]?.title ?? f;
-    const lead = typeof doc.frames?.[f]?.lead === "string" ? doc.frames[f].lead!.trim() : "";
-    const minW = Math.max(size?.[0] ?? 0, textWidth(plainText(title), "title", 24) + PAD * 2 + (numbers[f] ? FRAME_NUM_W : 0), 240, lead ? 440 : 0);
+    const lead = frameDescription(doc.frames?.[f]);
+    const minW = Math.max(size?.[0] ?? 0, textWidth(plainText(title), "title", 24) + PAD * 2 + (numbers[f] ? FRAME_NUM_W : 0) + (doc.frames?.[f]?.url ? 40 : 0), 240, lead ? 440 : 0);
     const minH = Math.max(size?.[1] ?? 0, TITLE_H + 120);
     const x0 = Math.min(0, (c?.x ?? PAD) - PAD);
     const x1 = Math.max(minW, (c ? c.x + c.w : 0) + PAD), y1 = Math.max(minH, (c ? c.y + c.h : 0) + PAD);
-    // the lead sits between the title and the contents: the frame grows upward to make room, so nothing inside moves
+    // the description sits between the title and the contents: the frame grows upward to make room, so nothing inside moves
     leads[f] = lead ? wrap(lead, "hand", LEAD_SIZE, x1 - x0 - 52) : [];
     const y0 = Math.min(0, (c?.y ?? TITLE_H) - TITLE_H) - (leads[f].length ? leads[f].length * LEAD_LH + 12 : 0);
     localBox[f] = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };

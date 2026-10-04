@@ -8,7 +8,7 @@ import { CHART_KIND_LABEL, CHART_KINDS, chartRows, chartText, parseChartText, ty
 import { hostOf, slides, type BoardLayout } from "../layout";
 import { parseRef } from "../refs";
 import { Stamp } from "../render/stamps";
-import { typeOf, type Cards, type FlowchartFile, type FNode, type Side } from "../types";
+import { frameDescription, typeOf, type Cards, type FlowchartFile, type FNode, type Side } from "../types";
 import { CONNECTORS, FILL_NAMES, FILLS, HEADS, LINE_COLOR_NAMES, LINE_COLORS, LINK_STYLES, NODE_TYPES, SIDES, STAMPS, STICKY, STICKY_COLORS, TEXT_SIZE_LABEL, TEXT_SIZES, WEIGHTS } from "../vocab";
 import type { Key, Path } from "./model";
 
@@ -312,7 +312,7 @@ export function Inspector({ doc, L, cards, sel, result, a, focusText }: { doc: F
       <aside className="inspector">
         <h3>Frame<small>{id}</small></h3>
         <Field label="Title" wide><Text value={f.title ?? ""} focusKey={focusText} onChange={(v) => a.set(P("title"), v || undefined, `ftitle:${id}`)} /></Field>
-        <Field label="Its point" wide><Text area value={f.lead ?? ""} placeholder="What this frame shows, in a sentence. It's written large under the title." onChange={(v) => a.set(P("lead"), v || undefined, `flead:${id}`)} /></Field>
+        <Field label="Description" wide><Text area value={frameDescription(f)} placeholder="What this frame shows, in a plain sentence or two. It's written large under the title." onChange={(v) => a.setMany([[P("description"), v || undefined], [P("lead"), undefined]], `fdesc:${id}`)} /></Field>
         <Field label="Speaker notes" wide><Text area value={f.notes ?? ""} placeholder="What to point out when this is on screen" onChange={(v) => a.set(P("notes"), v || undefined, `notes:${id}`)} /></Field>
         <Field label="Web link" wide><Text mono value={f.url ?? ""} placeholder="https://… (the spec, the epic, the prototype)" onChange={(v) => a.set(P("url"), v || undefined, `furl:${id}`)} /></Field>
         <Field label="Flow runs">

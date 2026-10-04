@@ -1,4 +1,5 @@
 import { FRAME_PROPS, LINK_PROPS, NODE_PROPS, NODE_TYPES, STAMPS, STICKY } from "./vocab";
+import { plainWordsMd } from "../vendor/sketch/plain";
 
 /** Shorthand used throughout the docs for "run this skill's bundled script". Defined at the top of SKILL.md. */
 export const CLI = "fc";
@@ -51,27 +52,30 @@ path. **Below, \`${CLI}\` is short for that whole command.**
 9. **Present**: frames are slides, in \`present\` order. \`${CLI} export <file> --pdf\` (board plus a page per frame)
    or \`--pptx\` (a slide per frame, with each frame's \`notes\` as speaker notes).
 
+${plainWordsMd("frame titles and descriptions, steps, stickies, labels on arrows, speaker notes")}
 ## Craft: what makes a board useful
 
-**A board is an argument, not a wall of thoughts.** Someone opening it cold should get the point in ten seconds
-and read the rest as the evidence:
+**A board should make sense to someone who wasn't there.** They open it, they know what it's saying in ten
+seconds, and the rest backs that up. A pile of notes doesn't do that. So:
 
-- **The answer first.** The first frame says what you found, in its \`lead\`: "Probably not. Lenders shrug at
-  late; what stops them lending is damage." If the board's title is a question, this is where it's answered.
-- **Every frame makes one point, and says it.** \`lead\` is the frame's point in a sentence, written large under
-  its title. Name frames for their point ("Lateness isn't what stops people lending"), not their topic
-  ("Research"), so the titles alone tell the story.
-- **A reading order.** List the frames in \`present\` in the order of the argument; they get numbered on the
+- **Say the answer first.** The first frame's \`description\` says what you found: "Probably not. People don't
+  mind late returns. They stop lending when tools come back broken." If the board's title is a question, this is
+  where it gets answered.
+- **Every frame has a title that says something, and a description.** \`description\` is a plain sentence or two
+  under the title: what this frame shows. The title is a short sentence too ("People don't mind late returns"),
+  not a topic ("Research"). Someone reading only the titles should get the whole story.
+- **Give it a reading order.** List the frames in \`present\` in the order you'd tell it. They get numbered on the
   canvas. Place them in rows of two or three with \`near\`, like a comic, so the board fits on a screen: a row
   left to right, then the next row \`"near": ["below", "<the first frame>"]\`.
-- **Notes in groups, under headings.** Loose notes read like an outline, in the order you write them: a short
-  \`text\` followed by stickies becomes a column with the text as its heading, so write heading, its notes, next
-  heading, its notes. Two to four columns a frame. Keep what was found, what you're assuming and what's still
+- **Put notes in groups, under headings.** Loose notes are laid out in the order you write them. A short \`text\`
+  followed by stickies becomes a column with the text as its heading. So write a heading, its notes, the next
+  heading, its notes. Two to four columns a frame. Keep what you found, what you're guessing and what's still
   open in separate columns. Never leave six stickies in a pile.
-- **Notes about a step sit beside it.** \`near\` ties a sticky to its step with a dotted line; without it nobody
-  can tell what the note is about.
-- **End on what's needed**: what you'd do, what has to be decided, or the questions still open.
-- **Less.** A dozen words a sticky, 5 to 15 things a frame, five frames or so. Cut what doesn't earn its place.
+- **Put a note about a step next to that step.** \`near\` ties a sticky to its step with a dotted line. Without it
+  nobody can tell what the note is about.
+- **End with what happens next**: what you'd do, what someone has to decide, or the questions still open.
+- **Less.** A dozen words a sticky, 5 to 15 things a frame (not counting headings and stamps), five frames or
+  so. Cut anything that isn't needed.
 
 - **Frames are the unit.** Group a board into frames by story beat (how it should go, what really happens,
   what to try, what's still open), each named for its point. Each becomes a slide. Place new ones by relation, never coordinates:
@@ -105,7 +109,6 @@ and read the rest as the evidence:
 - **Looks are optional.** Boxes take \`size\` (s, m, l, xl), \`fill\`, \`stroke\` and \`weight\`; arrows take
   \`shape\` (curved, angled, straight), \`style\` (solid, dashed, dotted), \`head\` (end, start, both, none),
   \`color\` and \`weight\`. Use them to mean something (red for where it breaks), not to decorate.
-- 5 to 15 things per frame. Split bigger ones.
 `;
 
 const list = (o: Record<string, string>) => Object.entries(o).map(([k, v]) => `- \`${k}\`: ${v}`).join("\n");
@@ -128,12 +131,12 @@ export const FORMAT_MD = `# flowchart.json format
 {
   "title": "What happens when the order runs late",
   "frames": {                              // keyed by id; each one is a slide in Play
-    "happy": { "title": "On time, it just works",                      // named for its point, not its topic
-               "lead": "The flow we designed for: order ahead, walk in, grab it and go.",   // the point, written large
+    "happy": { "title": "When the order is on time, it works",         // a short sentence, not a topic
+               "description": "You order ahead, walk in, grab your drink and go.",   // what it shows, written large
                "notes": "What we designed for." },                     // speaker notes for Play
-    "late": { "title": "Late, nobody tells them, so they ask a human", "lead": "This is where trust breaks.",
+    "late": { "title": "When the order is late, people ask the barista", "description": "The app still says 4 minutes.",
               "near": ["right of", "happy"] },                         // placed by relation
-    "ideas": { "title": "Three ways to tell the truth about the wait", "lead": "The star is the one I'd try first.",
+    "ideas": { "title": "Three ideas to try", "description": "I'd start with the one that has a star.",
                "near": ["below", "late"], "url": "https://…/browse/ORDER-400" }
   },
   "nodes": {                               // keyed by id; every node goes in a frame (or none: the loose area)

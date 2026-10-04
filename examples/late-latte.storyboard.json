@@ -43,7 +43,7 @@
     },
     { "id": "later", "type": "time", "text": "12 minutes later…", "icon": "clock", "label": "Still waiting" },
     {
-      "id": "asks", "scene": "coffee-shop", "shot": "close-up", "label": "The workaround: ask a human",
+      "id": "asks", "scene": "coffee-shop", "shot": "close-up", "label": "He asks the barista instead",
       "characters": [{ "who": "marcus", "pose": "standing", "mood": "stressed", "at": "counter" }],
       "bubbles": [{ "type": "speech", "from": "marcus", "text": "Sorry, is order 214 ready?" }]
     },
@@ -51,7 +51,7 @@
       "id": "commute", "scene": "transit", "shot": "wide", "label": "Late for the 8:40",
       "characters": [{ "who": "marcus", "pose": "sitting", "mood": "tired", "at": "seat", "device": "phone" }],
       "bubbles": [{ "type": "thought", "from": "marcus", "text": "Next time I'll just stand in line." }],
-      "callouts": [{ "text": "Trust lost: he'll skip ordering ahead next time", "target": "marcus" }]
+      "callouts": [{ "text": "After this, he stops ordering ahead", "target": "marcus" }]
     }
   ]
 }

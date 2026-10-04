@@ -46,27 +46,64 @@ path. **Below, `fc` is short for that whole command.**
 9. **Present**: frames are slides, in `present` order. `fc export <file> --pdf` (board plus a page per frame)
    or `--pptx` (a slide per frame, with each frame's `notes` as speaker notes).
 
+## Write it plainly
+
+Everything you write here (frame titles and descriptions, steps, stickies, labels on arrows, speaker notes) should sound like you telling a teammate across the table. If it sounds
+like a headline, a slogan or a slide from a consultant, write it again.
+
+- **Whole sentences, ordinary words.** Say who does what. "People don't mind when a tool comes back a day late."
+  Not "Owners shrug at late."
+- **One idea in a sentence.** No semicolons. No colon bolting two ideas together. If there are two things to say,
+  write two short sentences.
+- **Keep the small words** (the, a, their, when, because, so). Leaving them out is what makes writing read like a
+  telegram.
+- **Say the thing, don't name it.** "We don't know how often tools come back late" is clearer than "The claim has
+  no number behind it."
+- **The plainest word wins.** "Use", not "leverage". "Show", not "surface". "Problem", not "pain point". "The
+  hard part", not "friction". "Depends on", not "rests on" or "hinges on". "Because", not "due to".
+- **No clever turns.** No metaphors, no slogans, no lists of three for rhythm. If a phrase is showing off, cut
+  it.
+- **Numbers and names as they are.** "8 of 12 people". "The Pay button". Not "most users" or "the primary action".
+- **Short.** A title is one plain sentence you could say out loud, about ten words at most. A description is one
+  or two short sentences. A sticky is a dozen words. A step in a flow is the one place for a clipped label: a
+  few words, verb first ("Asks the barista").
+- **Read it out loud.** If you wouldn't say it that way to a friend, change it until you would.
+
+| Instead of | Write |
+|---|---|
+| Owners shrug at late; hidden damage is what stops them lending | People don't mind late returns. They stop lending when tools come back broken. |
+| The ask rests on one claim with no number behind it | The PM says people return things late. We don't know how often. |
+| The fee acts after the loan, and never looks at the tool | A late fee doesn't check whether the tool is broken. |
+| Try first: check the tool at handover, let the app do the asking | A cheaper idea to try first |
+| Late, nobody tells them, so they ask a human | When the order is late, people ask the barista |
+| Trust lost | After this, he stops ordering ahead |
+| Surface the real queue to reduce friction | Show people the real queue so they know how long it'll be |
+
+The same goes for the message you send when you hand it over.
+
 ## Craft: what makes a board useful
 
-**A board is an argument, not a wall of thoughts.** Someone opening it cold should get the point in ten seconds
-and read the rest as the evidence:
+**A board should make sense to someone who wasn't there.** They open it, they know what it's saying in ten
+seconds, and the rest backs that up. A pile of notes doesn't do that. So:
 
-- **The answer first.** The first frame says what you found, in its `lead`: "Probably not. Lenders shrug at
-  late; what stops them lending is damage." If the board's title is a question, this is where it's answered.
-- **Every frame makes one point, and says it.** `lead` is the frame's point in a sentence, written large under
-  its title. Name frames for their point ("Lateness isn't what stops people lending"), not their topic
-  ("Research"), so the titles alone tell the story.
-- **A reading order.** List the frames in `present` in the order of the argument; they get numbered on the
+- **Say the answer first.** The first frame's `description` says what you found: "Probably not. People don't
+  mind late returns. They stop lending when tools come back broken." If the board's title is a question, this is
+  where it gets answered.
+- **Every frame has a title that says something, and a description.** `description` is a plain sentence or two
+  under the title: what this frame shows. The title is a short sentence too ("People don't mind late returns"),
+  not a topic ("Research"). Someone reading only the titles should get the whole story.
+- **Give it a reading order.** List the frames in `present` in the order you'd tell it. They get numbered on the
   canvas. Place them in rows of two or three with `near`, like a comic, so the board fits on a screen: a row
   left to right, then the next row `"near": ["below", "<the first frame>"]`.
-- **Notes in groups, under headings.** Loose notes read like an outline, in the order you write them: a short
-  `text` followed by stickies becomes a column with the text as its heading, so write heading, its notes, next
-  heading, its notes. Two to four columns a frame. Keep what was found, what you're assuming and what's still
+- **Put notes in groups, under headings.** Loose notes are laid out in the order you write them. A short `text`
+  followed by stickies becomes a column with the text as its heading. So write a heading, its notes, the next
+  heading, its notes. Two to four columns a frame. Keep what you found, what you're guessing and what's still
   open in separate columns. Never leave six stickies in a pile.
-- **Notes about a step sit beside it.** `near` ties a sticky to its step with a dotted line; without it nobody
-  can tell what the note is about.
-- **End on what's needed**: what you'd do, what has to be decided, or the questions still open.
-- **Less.** A dozen words a sticky, 5 to 15 things a frame, five frames or so. Cut what doesn't earn its place.
+- **Put a note about a step next to that step.** `near` ties a sticky to its step with a dotted line. Without it
+  nobody can tell what the note is about.
+- **End with what happens next**: what you'd do, what someone has to decide, or the questions still open.
+- **Less.** A dozen words a sticky, 5 to 15 things a frame (not counting headings and stamps), five frames or
+  so. Cut anything that isn't needed.
 
 - **Frames are the unit.** Group a board into frames by story beat (how it should go, what really happens,
   what to try, what's still open), each named for its point. Each becomes a slide. Place new ones by relation, never coordinates:
@@ -100,4 +137,3 @@ and read the rest as the evidence:
 - **Looks are optional.** Boxes take `size` (s, m, l, xl), `fill`, `stroke` and `weight`; arrows take
   `shape` (curved, angled, straight), `style` (solid, dashed, dotted), `head` (end, start, both, none),
   `color` and `weight`. Use them to mean something (red for where it breaks), not to decorate.
-- 5 to 15 things per frame. Split bigger ones.

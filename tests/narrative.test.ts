@@ -12,17 +12,17 @@ const sticky = (text: string, more: Partial<FNode> = {}): FNode => ({ type: "sti
 const head = (text: string, more: Partial<FNode> = {}): FNode => ({ type: "text", text, frame: "f", ...more });
 const one = (nodes: Record<string, FNode>, frame: Record<string, unknown> = {}): FlowchartFile => ({ title: "t", frames: { f: { title: "A frame", ...frame } }, nodes });
 
-describe("a frame's lead", () => {
+describe("a frame's description", () => {
   it("is allowed, documented and drawn under the title", () => {
-    const doc = one({ a: sticky("A") }, { lead: "Lateness isn't what stops people lending." });
+    const doc = one({ a: sticky("A") }, { description: "Lateness isn't what stops people lending." });
     expect(validate(doc).errors).toEqual([]);
-    expect(JSON.stringify(buildSchema())).toContain('"lead"');
+    expect(JSON.stringify(buildSchema())).toContain('"description"');
     expect(boardSVG(doc)).toContain("Lateness isn&#x27;t what stops people lending.");
   });
 
   it("makes room above the contents, so nothing inside moves", () => {
     const nodes = { a: sticky("A"), b: sticky("B") };
-    const plain = layoutBoard(one(nodes)), led = layoutBoard(one(nodes, { lead: "This frame has a point and says it in a sentence." }));
+    const plain = layoutBoard(one(nodes)), led = layoutBoard(one(nodes, { description: "This frame has a point and says it in a sentence." }));
     expect(led.frames.f.lead.length).toBeGreaterThan(0);
     expect(led.frames.f.h).toBeGreaterThan(plain.frames.f.h);
     // the sticky is the same distance from the frame's bottom-left corner
@@ -33,9 +33,16 @@ describe("a frame's lead", () => {
   });
 
   it("wraps a long lead to the frame and keeps a short frame wide enough to read it", () => {
-    const L = layoutBoard(one({ a: sticky("A") }, { lead: "A long lead that says quite a lot about what this frame is for, so that it has to wrap onto a second line at least." }));
+    const L = layoutBoard(one({ a: sticky("A") }, { description: "A long lead that says quite a lot about what this frame is for, so that it has to wrap onto a second line at least." }));
     expect(L.frames.f.lead.length).toBeGreaterThan(1);
     expect(L.frames.f.w).toBeGreaterThanOrEqual(440);
+  });
+
+  it("still shows the old name, `lead`, and asks for it to be renamed", () => {
+    const doc = { title: "t", frames: { f: { title: "A frame", lead: "An older board said it this way." } }, nodes: { a: sticky("A") } } as FlowchartFile;
+    expect(layoutBoard(doc).frames.f.lead.length).toBeGreaterThan(0);
+    expect(validate(doc).errors).toEqual([]);
+    expect(validate(doc).warnings.map((w) => w.message).join()).toMatch(/now called "description"/);
   });
 
   it("stays out of the way when there isn't one", () => {
@@ -52,6 +59,10 @@ describe("reading order", () => {
   it("doesn't number a board with no order, or a single slide", () => {
     expect(layoutBoard(doc()).frames.a.n).toBeUndefined();
     expect(layoutBoard(doc(["a"])).frames.a.n).toBeUndefined();
+  });
+  it("leaves room for a frame's link badge after a long title", () => {
+    const w = (url?: string) => layoutBoard({ title: "t", frames: { a: { title: "A title long enough to set the width of its frame all by itself", ...(url ? { url } : {}) } }, nodes: { x: { text: "X", frame: "a" } } }).frames.a.w;
+    expect(w("https://example.com")).toBeGreaterThan(w());
   });
   it("leaves room for the number in front of a long title", () => {
     const wide = (present?: string[]) => layoutBoard({ ...doc(present), frames: { a: { title: "A title long enough to set the width of its frame all by itself" }, b: { title: "B" } } }).frames.a.w;
@@ -94,7 +105,7 @@ describe("loose notes read like an outline", () => {
   });
 
   it("nothing overlaps, with a flow above, columns below and a lead on top", () => {
-    const doc: FlowchartFile = { title: "t", frames: { f: { title: "Mixed", lead: "A flow, and what we make of it." } }, nodes: { s1: { text: "Start", frame: "f" }, s2: { text: "End", frame: "f" }, h1: head("**Found**"), a: sticky("A"), b: sticky("B"), h2: head("**Open**"), c: sticky("C", { color: "pink" }), n: sticky("About the end", { near: "s2", frame: undefined }) }, links: [{ from: "s1", to: "s2" }] };
+    const doc: FlowchartFile = { title: "t", frames: { f: { title: "Mixed", description: "A flow, and what we make of it." } }, nodes: { s1: { text: "Start", frame: "f" }, s2: { text: "End", frame: "f" }, h1: head("**Found**"), a: sticky("A"), b: sticky("B"), h2: head("**Open**"), c: sticky("C", { color: "pink" }), n: sticky("About the end", { near: "s2", frame: undefined }) }, links: [{ from: "s1", to: "s2" }] };
     const L = layoutBoard(doc).nodes;
     const ids = Object.keys(L);
     for (const p of ids) for (const q of ids) if (p < q) expect(overlap(L[p], L[q]), `${p} over ${q}`).toBe(false);
@@ -154,9 +165,9 @@ describe("critique", () => {
   const argument: FlowchartFile = {
     title: "Late fees",
     frames: {
-      answer: { title: "Do late fees fix the right problem?", lead: "Probably not. Lenders shrug at late; what stops them lending is damage." },
-      ev: { title: "Lateness isn't what stops people lending", lead: "Late on its own gets a shrug. Two other things don't." },
-      next: { title: "Before building anything", lead: "Two answers would settle it." },
+      answer: { title: "Do late fees fix the right problem?", description: "Probably not. People don't mind late returns. They stop lending when tools come back broken." },
+      ev: { title: "People don't mind late returns", description: "Two other things bother them more." },
+      next: { title: "What to find out before building anything", description: "Two answers would settle it." },
     },
     nodes: { c: { type: "sticky", text: "A fee turns a favor into a bill", frame: "answer" }, h1: { type: "text", text: "**Damage**", frame: "ev" }, e1: { type: "sticky", text: "Owners stop lending over damage", frame: "ev" }, h2: { type: "text", text: "**Nobody borrows**", frame: "ev" }, e2: { type: "sticky", text: "Apps died because nobody borrowed", frame: "ev" }, q1: { type: "sticky", text: "How many loans came back late?", color: "pink", frame: "next" } },
     present: ["answer", "ev", "next"],
@@ -167,11 +178,11 @@ describe("critique", () => {
   });
   it("asks for a reading order, and for every frame to be in it", () => {
     expect(messages({ ...argument, present: undefined })).toMatch(/no reading order/);
-    expect(messages({ ...argument, present: ["answer", "ev"] })).toMatch(/"Before building anything" isn't in the reading order/);
+    expect(messages({ ...argument, present: ["answer", "ev"] })).toMatch(/"What to find out before building anything" isn't in the reading order/);
   });
-  it("flags a topic title even when the frame has a lead, a paragraph of a lead, and an essay on a sticky", () => {
-    expect(messages({ ...argument, frames: { ...argument.frames, ev: { title: "Research", lead: "Late gets a shrug." } } })).toMatch(/"Research" names a topic, not a point/);
-    expect(messages({ ...argument, frames: { ...argument.frames, ev: { title: argument.frames!.ev.title, lead: "word ".repeat(60) } } })).toMatch(/paragraph, not a point/);
+  it("flags a topic title even when the frame has a description, a paragraph of a description, and an essay on a sticky", () => {
+    expect(messages({ ...argument, frames: { ...argument.frames, ev: { title: "Research", description: "People don't mind late returns." } } })).toMatch(/"Research" names a topic/);
+    expect(critique({ ...argument, frames: { ...argument.frames, ev: { title: argument.frames!.ev.title, description: "word ".repeat(60) } } }).map((n) => n.fix).join()).toMatch(/paragraph/);
     expect(messages({ ...argument, nodes: { ...argument.nodes, e1: { type: "sticky", text: "long ".repeat(40), frame: "ev" } } })).toMatch(/nodes\.e1: A sticky this long/);
   });
   it("leaves small boards and brainstorm walls mostly alone", () => {
@@ -212,13 +223,13 @@ describe("rows of frames", () => {
     expect(F.e.x).toBe(F.d.x + F.d.w + 120);
   });
   it("critique asks for rows when the frames make one long strip, and is happy once they're wrapped", () => {
-    const strip: FlowchartFile = { ...board(), frames: Object.fromEntries(["a", "b", "c", "d", "e"].map((f, i, all) => [f, { title: `A point number ${i + 1} worth making`, lead: "And why it matters, said plainly.", ...(i ? { near: ["right of", all[i - 1]] } : {}) }])) as FlowchartFile["frames"] };
+    const strip: FlowchartFile = { ...board(), frames: Object.fromEntries(["a", "b", "c", "d", "e"].map((f, i, all) => [f, { title: `A point number ${i + 1} worth making`, description: "And why it matters, said plainly.", ...(i ? { near: ["right of", all[i - 1]] } : {}) }])) as FlowchartFile["frames"] };
     expect(critique(strip).map((n) => n.message).join()).toMatch(/one long strip/);
     const wrapped = { ...strip, frames: { ...strip.frames, d: { ...strip.frames!.d, near: ["below", "a"] } } } as FlowchartFile;
     expect(critique(wrapped).map((n) => n.message).join()).not.toMatch(/one long strip/);
   });
   it("leaves a board the designer has arranged alone", () => {
-    const strip: FlowchartFile = { ...board(), frames: Object.fromEntries(["a", "b", "c", "d", "e"].map((f, i, all) => [f, { title: `A point number ${i + 1} worth making`, lead: "Said plainly.", ...(i ? { near: ["right of", all[i - 1]] } : {}) }])) as FlowchartFile["frames"], canvas: { a: [0, 0] } };
+    const strip: FlowchartFile = { ...board(), frames: Object.fromEntries(["a", "b", "c", "d", "e"].map((f, i, all) => [f, { title: `A point number ${i + 1} worth making`, description: "Said plainly.", ...(i ? { near: ["right of", all[i - 1]] } : {}) }])) as FlowchartFile["frames"], canvas: { a: [0, 0] } };
     expect(critique(strip).map((n) => n.message).join()).not.toMatch(/one long strip/);
   });
 });
@@ -229,6 +240,30 @@ describe("link cards to files", () => {
     expect(hostOf("./tickets/PAY-218.md")).toBe("PAY-218.md");
     expect(hostOf("https://example.atlassian.net/browse/ORDER-412")).toBe("example.atlassian.net");
     expect(hostOf("www.figma.com/proto/abc")).toBe("figma.com");
+  });
+});
+
+describe("critique: plain words", () => {
+  const board = (title: string, description: string, sticky = "People stop lending when tools come back broken"): FlowchartFile => ({
+    title: "Late fees",
+    frames: { a: { title, description }, b: { title: "What to find out before building anything", description: "Two answers would settle it." } },
+    nodes: { s: { type: "sticky", text: sticky, frame: "a" }, q: { type: "sticky", text: "How many loans came back late?", color: "pink", frame: "b" } },
+    present: ["a", "b"],
+  });
+  const notes = (d: FlowchartFile) => critique(d).map((n) => `${n.where}: ${n.message} ${n.fix}`).join("\n");
+  it("is quiet when titles, descriptions and notes sound like a person talking", () => {
+    expect(critique(board("People don't mind late returns", "They stop lending when tools come back broken."))).toEqual([]);
+  });
+  it("flags a title that reads like a headline", () => {
+    const n = notes(board("Owners shrug at late; hidden damage is what stops them lending", "Probably not."));
+    expect(n).toMatch(/frames\.a: This frame's title doesn't read like a person talking/);
+    expect(n).toMatch(/semicolon/);
+    expect(n).toMatch(/the way you'd say it to a teammate/);
+  });
+  it("flags a colon in a title, jargon in a description, and jargon on a sticky", () => {
+    expect(notes(board("Try first: check the tool at handover", "Fine."))).toMatch(/colon/);
+    expect(notes(board("People don't mind late returns", "The ask rests on one claim."))).toMatch(/This frame's description[^\n]*depends on/);
+    expect(notes(board("People don't mind late returns", "Fine.", "Surface the real queue to reduce friction"))).toMatch(/nodes\.s: This sticky/);
   });
 });
 

@@ -1,11 +1,13 @@
 /**
  * Does the board read on its own? `validate` checks that a board is well formed; this checks that someone opening
- * it cold can tell what it's saying: the answer up front, a point per frame, a reading order, notes grouped by
- * what they are, and an ending that says what's needed. Nudges, not errors: a brainstorm wall can ignore them.
+ * it cold can tell what it's saying: the answer up front, a description on every frame, a reading order, notes
+ * grouped by what they are, an ending that says what's needed, and plain words throughout. Nudges, not errors:
+ * a brainstorm wall can ignore them.
  */
+import { plainIssues } from "../vendor/sketch/plain";
 import { plainText } from "../vendor/sketch/rich";
 import { homeFrame, layoutBoard } from "./layout";
-import { isNote, typeOf, type FlowchartFile } from "./types";
+import { frameDescription, isNote, typeOf, type FlowchartFile } from "./types";
 
 export interface Note {
   /** "board", or "frames.<id>", or "nodes.<id>" */
@@ -23,7 +25,7 @@ export function critique(doc: FlowchartFile): Note[] {
   const frames = doc.frames ?? {};
   const fids = Object.keys(frames);
   const title = (f: string) => plainText(frames[f]?.title ?? f).trim();
-  const lead = (f: string) => (typeof frames[f]?.lead === "string" ? frames[f].lead!.trim() : "");
+  const lead = (f: string) => frameDescription(frames[f]);
   const present = (Array.isArray(doc.present) ? doc.present : []).filter((f) => frames[f]);
   const order = present.length ? present : fids;
   const members: Record<string, string[]> = Object.fromEntries(fids.map((f) => [f, []]));
@@ -50,7 +52,7 @@ export function critique(doc: FlowchartFile): Note[] {
   // the answer, up front
   const first = order[0];
   const asks = /\?\s*$/.test(plainText(doc.title ?? "")) || /\?\s*$/.test(title(first));
-  if (!lead(first)) out.push({ where: `frames.${first}`, message: asks ? "The board asks a question and never answers it." : "The board doesn't say its point up front.", fix: "Give the first frame a \"lead\": the answer in a sentence or two (\"Probably not. Lenders shrug at late; what stops them lending is damage.\"). Everything after it is the evidence." });
+  if (!lead(first)) out.push({ where: `frames.${first}`, message: asks ? "The board asks a question and never answers it." : "The board doesn't say its point up front.", fix: "Give the first frame a \"description\" that answers it in a sentence or two, the way you'd say it out loud (\"Probably not. People don't mind late returns. They stop lending when tools come back broken.\"). Everything after it backs that up." });
 
   for (const f of order) {
     const p = `frames.${f}`;
@@ -58,11 +60,10 @@ export function critique(doc: FlowchartFile): Note[] {
     // a point per frame
     if (!lead(f) && f !== first) {
       const topic = TOPIC.test(title(f)) || title(f).split(/\s+/).length < 3;
-      out.push({ where: p, message: topic ? `"${title(f)}" names a topic, and nothing says what the frame shows.` : `"${title(f)}" doesn't say what to take from it.`, fix: `Add a "lead": the frame's point in a sentence.${topic ? " And name the frame for its point (\"Lateness isn't what stops people lending\"), not its topic." : ""}` });
+      out.push({ where: p, message: topic ? `"${title(f)}" names a topic, and nothing says what the frame shows.` : `"${title(f)}" doesn't say what to take from it.`, fix: `Add a "description": what this frame shows, in a plain sentence or two.${topic ? " And give it a title that says something (\"People don't mind late returns\"), not a topic." : ""}` });
     } else if (lead(f) && TOPIC.test(title(f))) {
-      out.push({ where: p, message: `"${title(f)}" names a topic, not a point.`, fix: "Name it for what it shows, so the titles alone tell the story." });
+      out.push({ where: p, message: `"${title(f)}" names a topic. It doesn't say anything yet.`, fix: "Give it a title that says what the frame shows, as a short plain sentence, so the titles alone tell the story." });
     }
-    if (lead(f).length > 220) out.push({ where: p, message: "The lead is a paragraph, not a point.", fix: "One or two sentences. Put the rest on notes in the frame." });
 
     // notes grouped by what they are, not piled
     const loose = ids.filter((id) => !linked.has(id) && !(isNote(doc.nodes[id]) && doc.nodes[id].near));
@@ -73,6 +74,18 @@ export function critique(doc: FlowchartFile): Note[] {
     else if (!headings.length && stickies.length >= 4 && colors.size >= 3) out.push({ where: p, message: "Different kinds of notes (what was found, what's assumed, what's still open) are mixed together.", fix: "Give each kind a text heading and put its stickies after it, so they read as columns." });
     if (ids.length > 16) out.push({ where: p, message: `${ids.length} things in one frame.`, fix: "Split it: one point per frame, 5 to 15 things each." });
   }
+
+  // plain words: titles, descriptions and notes should read like a person talking
+  const plain = (where: string, what: string, text: string | undefined, kind: Parameters<typeof plainIssues>[1]) => {
+    const issues = plainIssues(text ?? "", kind);
+    if (issues.length) out.push({ where, message: `${what} doesn't read like a person talking: "${plainText(text ?? "").slice(0, 70)}${plainText(text ?? "").length > 70 ? "…" : ""}"`, fix: `${issues.join(" ")} Write it the way you'd say it to a teammate.` });
+  };
+  plain("board", "The board's title", doc.title, "title");
+  for (const f of order) {
+    plain(`frames.${f}`, "This frame's title", frames[f]?.title, "title");
+    plain(`frames.${f}`, "This frame's description", lead(f), "description");
+  }
+  for (const [id, n] of Object.entries(doc.nodes ?? {})) if (n?.text && typeOf(n) !== "stamp") plain(`nodes.${id}`, typeOf(n) === "sticky" ? "This sticky" : typeOf(n) === "text" ? "This text" : "This step", n.text, "note");
 
   // stickies that are really paragraphs
   for (const [id, n] of Object.entries(doc.nodes ?? {})) {
@@ -89,6 +102,6 @@ export function critique(doc: FlowchartFile): Note[] {
 }
 
 export function formatCritique(notes: Note[], file: string): string {
-  if (!notes.length) return `✓ ${file} reads on its own: the answer up front, a point per frame, and an order to read them in.`;
+  if (!notes.length) return `✓ ${file} reads on its own: the answer up front, a description on every frame, an order to read them in, and plain words.`;
   return [`${notes.length} thing${notes.length === 1 ? "" : "s"} would make ${file} easier to read cold:`, ...notes.map((n) => `! ${n.where}: ${n.message}\n    → ${n.fix}`)].join("\n");
 }

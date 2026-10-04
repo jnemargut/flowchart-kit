@@ -2,12 +2,13 @@
 
 Recipes for common situations. Mix and trim; these are starting points, not templates to fill in.
 
-**Every board, whatever the recipe, reads on its own.** The frames below are what goes *after* a first frame
-that gives the answer. So: a first frame whose `lead` says what you found; a `lead` on every frame (its point
-in a sentence) and a title that names the point, not the topic; notes in columns under short `text` headings,
-never in a pile; `present` in the order of the argument; and a last frame for what's needed next. The recipes
-name frames by what goes in them ("The ask", "Options"); rename each for what it turns out to say ("The ask
-fixes the timer, not the wait"). `fc critique` checks all of this.
+**Every board, whatever the recipe, has to make sense to someone who wasn't there.** The frames below are what
+goes *after* a first frame that gives the answer. So: a first frame whose `description` says what you found. A
+title that says something and a `description` on every frame. Notes in columns under short `text` headings,
+never in a pile. `present` in the order you'd tell it. A last frame for what happens next. And plain words
+throughout: write it the way you'd say it. The recipes name frames by what goes in them ("The ask", "Options").
+Give each one a title that says what it turned out to show ("The ask fixes the timer. The wait is the problem.").
+`fc critique` checks all of this.
 
 ## Push back on a request ("the PM wants X")
 
@@ -22,7 +23,7 @@ The designer suspects the ask treats a symptom.
    the strongest argument you have. If there isn't, a pink sticky: "What would tell us which problem this is?"
 4. Wireframe only the screens that make the difference between the ask and the alternative visible.
 
-What you say: "The ticket fixes the timer. Panel 5 is the real problem: nobody tells Marcus it's late, so he asks a
+What you say: "The ticket fixes the timer. The real problem is in panel 5. Nobody tells Marcus it's late, so he asks a
 human. Option B texts him instead. Three questions before we pick."
 
 ## Make sense of a mess (notes, research, a long thread)
@@ -71,7 +72,7 @@ What you say: "Here's the brief as I understand it. The pink stickies are what I
 
 ## Turn research into findings (interviews, survey answers, support tickets)
 
-1. One sticky per observation, in the person's words where you can (quote marks), with who said it in small text.
+1. One sticky per observation, in the person's words where you can (quote marks), ending with who said it.
    Don't paraphrase the interesting part away.
 2. **Board**: cluster into frames named for the finding ("The ETA is a promise people plan around"), not the topic.
    Count how many people back each one in the frame's notes. Weak findings (one person) get a gray sticky saying so.

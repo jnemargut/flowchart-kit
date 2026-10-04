@@ -369,7 +369,7 @@ ok("Properties hides the panel", (await page.locator(".inspector").count()) === 
 await page.keyboard.press("Meta+Backslash");
 ok("Cmd+\\ brings it back", (await page.locator(".inspector").count()) === 1);
 
-// a frame says its point: the lead is typed in the panel, shows under the title, and undoes
+// a frame's description is typed in the panel, shows under the title, and undoes
 {
   await page.keyboard.press("Escape"); await page.keyboard.press("Escape");
   await page.keyboard.press("Meta+0");
@@ -377,18 +377,18 @@ ok("Cmd+\\ brings it back", (await page.locator(".inspector").count()) === 1);
   await click(await frameTitle("ideas"));
   await page.locator(".inspector h3", { hasText: /^Frame/ }).waitFor();
   const h0 = await page.evaluate(() => window.__fc.L.frames.ideas.h);
-  const lead0 = read().frames.ideas.lead;
+  const lead0 = read().frames.ideas.description;
   const long = "Three ways to tell people the truth about the wait, parked until next week's test, with the one I'd try first starred, and a ticket to follow.";
   await page.getByPlaceholder(/What this frame shows/).fill(long);
-  ok("a frame's point saves as its lead", await until(() => read().frames.ideas.lead === long));
+  ok("a frame's description saves", await until(() => read().frames.ideas.description === long));
   ok("it's written on the canvas, under the title", await until(async () => (await page.locator('svg.board [data-frame-lead="ideas"]').textContent())?.includes("parked until next week")));
   ok("the frame grows to fit a longer one", await until(async () => (await page.evaluate(() => window.__fc.L.frames.ideas.h)) > h0));
-  ok("the board is still valid with a lead", /is valid/.test(cli("validate", file)));
+  ok("the board is still valid with a description", /is valid/.test(cli("validate", file)));
   ok("critique runs from the CLI", /easier to read cold|reads on its own/.test(cli("critique", file)));
   await page.locator("svg.board [data-frame-lead='ideas']").click({ force: true });
-  ok("clicking the lead picks the frame", (await sel())[0] === "frame:ideas", JSON.stringify(await sel()));
+  ok("clicking the description picks the frame", (await sel())[0] === "frame:ideas", JSON.stringify(await sel()));
   await page.keyboard.press("Meta+z");
-  ok("undo brings the old lead back", await until(() => read().frames.ideas.lead === lead0));
+  ok("undo brings the old description back", await until(() => read().frames.ideas.description === lead0));
   await page.keyboard.press("Escape");
 }
 

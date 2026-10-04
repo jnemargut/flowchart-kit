@@ -19,7 +19,7 @@ So that's what this is: a marker-and-paper canvas where your agent does the bori
 routing the arrows, finding room for the next frame) and you do the thinking. Everything's drawn by hand, so
 nobody mistakes it for a spec.
 
-![A whole board: numbered frames, each saying its point, with notes tied to what they're about](docs/board-d7bfdb4.png)
+![A whole board: numbered frames, each with a plain description, and notes tied to what they're about](docs/board-134b6b2.png)
 
 ## Frames are the story
 
@@ -29,12 +29,15 @@ writes a coordinate. When you drag something, your drag wins and sticks.
 
 A board should read on its own, so it's built like an argument, not a wall of thoughts:
 
-- **Every frame says its point**, in a sentence under its title, and is named for that point ("Late, nobody tells
-  them, so they ask a human"), not its topic. The first frame gives the answer.
+- **Every frame has a description**, a plain sentence or two under its title, and a title that says something
+  ("When the order is late, people ask the barista") instead of naming a topic. The first frame gives the answer.
 - **Frames are numbered** in the order you'd read them.
 - **Notes read like an outline.** A short heading followed by stickies becomes a column, so what was found, what's
   assumed and what's still open don't end up in one pile.
 - **Notes about a step are tied to it** with a dotted line, so nobody has to guess what a sticky is about.
+
+- **Plain words.** Titles, descriptions and notes are written the way you'd say them to a teammate. No clipped
+  headlines, no jargon.
 
 `fc critique` checks a board for all of that, and your agent runs it before it hands anything over.
 
@@ -47,7 +50,7 @@ Flowchart Kit works great on its own. It's also the canvas where the other two k
 [Wireframe Kit](https://github.com/jnemargut/wireframe-kit) draws low-fi screens and flows. Put either on a board
 as a **card**: a whole storyboard, one panel, a whole flow, or one screen.
 
-![Cards: the order status screen and a storyboard panel, right in the flow](docs/cards-41575b4.png)
+![Cards: the order status screen and a storyboard panel, right in the flow](docs/cards-ed09d0e.png)
 
 Cards point at the files (`"ref": "./late-latte.storyboard.json#asks"`), so they're never stale copies. Change
 the storyboard and the card catches up on its own. Copy a panel in Storyboard Kit, or a screen in Wireframe Kit,
@@ -176,7 +179,7 @@ what's installed.
 
 ## The editor bits
 
-![The editor: palette, stamps, cards nearby, and a selected step](docs/editor-c0d7407.png)
+![The editor: palette, stamps, cards nearby, and a selected step](docs/editor-55572f4.png)
 
 **Flowing**
 
@@ -217,7 +220,7 @@ add it next to what's selected, or drag it wherever you like.
 
 ## Present it
 
-![Play: a frame as a slide, sharpie, speaker notes and the slide strip](docs/play-cf74049.png)
+![Play: a frame as a slide, sharpie, speaker notes and the slide strip](docs/play-f51348d.png)
 
 Hit **Play** (or P). Each frame is a slide, in the order you set in the board's inspector, with a fade or a cut
 between them. No frames? You get the whole board.

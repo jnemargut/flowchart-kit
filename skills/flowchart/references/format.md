@@ -4,12 +4,12 @@
 {
   "title": "What happens when the order runs late",
   "frames": {                              // keyed by id; each one is a slide in Play
-    "happy": { "title": "On time, it just works",                      // named for its point, not its topic
-               "lead": "The flow we designed for: order ahead, walk in, grab it and go.",   // the point, written large
+    "happy": { "title": "When the order is on time, it works",         // a short sentence, not a topic
+               "description": "You order ahead, walk in, grab your drink and go.",   // what it shows, written large
                "notes": "What we designed for." },                     // speaker notes for Play
-    "late": { "title": "Late, nobody tells them, so they ask a human", "lead": "This is where trust breaks.",
+    "late": { "title": "When the order is late, people ask the barista", "description": "The app still says 4 minutes.",
               "near": ["right of", "happy"] },                         // placed by relation
-    "ideas": { "title": "Three ways to tell the truth about the wait", "lead": "The star is the one I'd try first.",
+    "ideas": { "title": "Three ideas to try", "description": "I'd start with the one that has a star.",
                "near": ["below", "late"], "url": "https://…/browse/ORDER-400" }
   },
   "nodes": {                               // keyed by id; every node goes in a frame (or none: the loose area)
