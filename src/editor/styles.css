@@ -308,3 +308,6 @@ a.btn { text-decoration: none; color: inherit; display: inline-block; }
 .play-body { padding: 14px 14px 62px; } /* room for the bar, so it never covers the bottom of what you're showing */
 .play-strip { padding-bottom: 68px; }
 @media (prefers-reduced-motion: reduce) { .play-bar { transition: none; } }
+/* the bar sits at the bottom, so the sharpie's colors open upward; and its color dots stay round */
+.play-bar .pen-pop { top: auto; bottom: calc(100% + 12px); border-radius: 8px; }
+.play-bar .pen-dot { border-radius: 50%; }

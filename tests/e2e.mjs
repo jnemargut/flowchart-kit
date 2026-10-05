@@ -365,6 +365,13 @@ await page.keyboard.press("n");
 ok("N shows the speaker notes", (await page.locator(".play-notes").textContent()).includes("8am"));
 await page.keyboard.press("d");
 ok("drawing brings out the eraser and keeps the controls up", (await page.locator(".play-bar button", { hasText: "Eraser" }).count()) === 1 && !(await page.locator(".play-bar").getAttribute("class")).includes("asleep"));
+{
+  // the sharpie's colors open above the bar, all of it on screen
+  await page.locator(".play-bar .pen-dot").first().click();
+  const pop = await page.locator(".pen-pop").boundingBox(), vp = page.viewportSize();
+  ok("the sharpie's colors open fully on screen", !!pop && pop.y >= 0 && pop.y + pop.height <= vp.height && pop.x >= 0 && pop.x + pop.width <= vp.width, JSON.stringify(pop));
+  await page.locator(".play-bar .pen-dot").first().click();
+}
 const sl = await page.locator(".play-slide").boundingBox();
 await page.mouse.move(sl.x + 100, sl.y + 100); await page.mouse.down(); await page.mouse.move(sl.x + 220, sl.y + 160, { steps: 6 }); await page.mouse.up();
 await until(() => read().markup?.late?.length === 1);
