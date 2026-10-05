@@ -7,7 +7,7 @@ questions are, pulls in the storyboard panel or wireframe screen that shows the 
 you push things around, add more, and present it. It's for thinking out loud, by yourself, before anything is
 real.
 
-![Flowchart Kit sizzle reel](docs/sizzle-23228e6.gif)
+![Flowchart Kit sizzle reel](docs/sizzle-bfb39fd.gif)
 
 ## Why though
 
