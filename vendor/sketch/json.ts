@@ -63,6 +63,10 @@ export function applyOps<T>(doc: T, ops: Op[]): T {
       pruneEmpty(root, op.path.slice(0, -1));
     } else if (op.insert && Array.isArray(cur) && typeof last === "number") {
       cur.splice(last, 0, op.value);
+    } else if (Array.isArray(cur) && typeof last === "number" && last > cur.length) {
+      // an index past the end (the list got shorter since the edit was worked out): add it at the end,
+      // never leave a gap, which wouldn't even be valid JSON on disk
+      cur.push(op.value);
     } else {
       cur[last] = op.value;
     }
